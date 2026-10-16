@@ -19,8 +19,8 @@
 ## 開発技術
 ### 活用した技術
 #### API・データ
-* 
-* 
+* LINE Messaging API
+* Slack API（Events API / Socket Mode）
 
 #### フレームワーク・ライブラリ・モジュール
 * 
