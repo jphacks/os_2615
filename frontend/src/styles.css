@@ -290,7 +290,7 @@ h1 span {
 .inbox-layout {
   display: grid;
   grid-template-columns: 345px minmax(0, 1fr);
-  height: calc(100dvh - 305px);
+  height: calc(100dvh - 170px);
   min-height: 480px;
   background: white;
   border: 1px solid #e1e7e3;
@@ -1101,7 +1101,7 @@ h1 span {
   }
   .inbox-layout {
     display: block;
-    height: calc(100dvh - 260px);
+    height: calc(100dvh - 165px);
     min-height: 420px;
   }
   .inbox-panel {
