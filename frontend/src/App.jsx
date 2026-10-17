@@ -68,6 +68,8 @@ export default function App() {
   const [tabMoveMethod, setTabMoveMethod] = useState(() => { try { return readSettings(window.localStorage).tabMoveMethod; } catch { return 'both'; } });
   const [tabs, setTabs] = useState([]);
   const [creatingTab, setCreatingTab] = useState(false);
+  const [tabEditRequest, setTabEditRequest] = useState(null);
+  function editTabName(id) { setCreatingTab(false); setFilter(`tab:${id}`); setTabEditRequest({ id }); }
   const filters = [...baseFilters, ...tabs.map(tab => [`tab:${tab.id}`, tab.name, Inbox])];
   const matchesFilter = (item, value) => value.startsWith("tab:")
     ? Boolean(tabs.find(tab => `tab:${tab.id}` === value)?.contactIds.includes(item.contact.id))
@@ -301,7 +303,7 @@ export default function App() {
       <aside className="sidebar">
         <a href="./" className="brand">
           <span>
-            <img src="/konekuto-icon.svg" alt="" width="44" height="44" />
+            <img src="/konekuto-crayon.png" alt="" width="44" height="44" />
           </span>
           <b>
             <span>こね</span><span>くと</span>
@@ -311,7 +313,7 @@ export default function App() {
           <div className="sidebar-tab-group" role="group" aria-label="標準フィルタ">
             {baseFilters.map(([f, label, Icon]) => <button key={f} className={`nav-item ${filter === f ? "chosen" : ""}`} onClick={() => setFilter(f)}><Icon size={18} /><span>{label}</span><small>{counts[f]}</small></button>)}
           </div>
-          <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} vertical onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
+          <DraggableTabs onEdit={editTabName} dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} vertical onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
         </nav>
         <div className="sidebar-bottom">
           <p>つながっているサービス</p>
@@ -382,7 +384,7 @@ export default function App() {
           <section className="inbox-panel" aria-label="会話一覧">
             <div className="list-heading">
               <h2>
-                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}の会話{" "}
+                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}{" "}
                 <span>{visible.length}</span>
               </h2>
               <button
@@ -411,9 +413,9 @@ export default function App() {
               <div className="tab-group" role="group" aria-label="標準フィルタ">
                 {baseFilters.map(([f, label]) => <button key={f} className={filter === f ? "chosen" : ""} onClick={() => setFilter(f)}>{label}</button>)}
               </div>
-              <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
+              <DraggableTabs onEdit={editTabName} dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
             </div>
-            <CustomTabs showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
+            <CustomTabs editRequest={tabEditRequest} showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
@@ -464,7 +466,7 @@ export default function App() {
                           ) : (
                             <span className="replied">
                               <Check size={11} />
-                              返信済み
+                              {m?.isFromMe ? "返信済み" : "対応済み"}
                             </span>
                           )}
                           {r && (
@@ -545,6 +547,12 @@ export default function App() {
                     <Platform value={selected.contact.platform} />
                     <span className="dm-label">ダイレクトメッセージ</span>
                   </div>
+                  {selected.conversation.hasUnreplied && <button
+                    type="button" className="complete-button" disabled={busy || sending}
+                    title="メッセージを送らず対応を完了し、リマインダーも終了します"
+                    onClick={() => action(() => api.complete(selected.contact.id, selected.conversation.lastMessageId), "対応済みにしました")}>
+                    <Check size={16} />対応済みにする
+                  </button>}
                   <button
                     className={`favorite-button ${selected.contact.isFavorite ? "is-favorite" : ""}`}
                     aria-label={

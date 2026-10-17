@@ -325,3 +325,11 @@ POST /api/tabs/reorder: { tabIds: string[], expectedOrder: string[] }。
 保存時点のタブ構成・順番が異なる場合は409 TAB_ORDER_CHANGEDで拒否し、他端末の変更を保護する。
 成功200 { data: Tab[] }。所属Contactや会話は変更せず、順番だけを保存する。
 PCはタブをドラッグ、スマホは横のつまみを長押しして移動する。既存の移動ボタンも利用できる。
+
+### PATCH /api/tabs/:id
+
+タブ名を変更する。本文 `{ "name": "仕事" }`（前後空白を除き1〜40文字）。成功時 `{ "data": CustomTab }`。所属・順序・IDを保持する。
+
+### POST /api/contacts/:id/complete
+
+本文 `{ "lastMessageId": "表示中の最終メッセージID" }`。送信せず未返信を解除し、pendingのリマインダーをdoneにする。成功時 `{ "data": Conversation }`。最終メッセージが変わっていたら409。新しい受信で再び未返信になる。

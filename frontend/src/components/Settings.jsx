@@ -40,7 +40,7 @@ export default function Settings({ onTabMoveMethodChange }) {
       <fieldset><legend>タブの移動方法</legend><div className="settings-options settings-move-options">
         {[['both','両方で移動する（標準）'],['drag','ドラッグ＆ドロップで移動する'],['buttons','ボタン操作で移動する']].map(([value,label]) => <label key={value}><input type="radio" name="tabMoveMethod" value={value} checked={settings.tabMoveMethod===value} onChange={() => setSettings(current => ({...current,tabMoveMethod:value}))} />{label}</label>)}
       </div><p>ボタン操作では「一番前へ・前へ・後へ・一番後ろへ」を使います。</p></fieldset>
-      <div className="settings-sample"><strong>表示プレビュー</strong><p>誰から届いて、誰に返すかを こねくと で。</p><span>変更は画面全体へすぐに反映されます。</span></div>
+      <div className="settings-sample"><strong>表示プレビュー</strong><p>誰から届いて、誰に返すかを こねくと ひとつで。</p><span>変更は画面全体へすぐに反映されます。</span></div>
       {!saved && <p role="alert">ブラウザに設定を保存できませんでした。この画面では反映されますが、次回は元に戻る場合があります。</p>}
       <footer><button type="button" onClick={() => setSettings({...defaultSettings})}>標準に戻す</button><button type="button" onClick={() => dialog.current.close()}>完了</button></footer>
     </dialog>

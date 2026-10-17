@@ -104,3 +104,19 @@ test('ドラッグ順を一括保存し、所属を保持して古い順番で�
  assert.equal((await call('/reorder','POST',{tabIds:ids,expectedOrder:before.tabs.map(tab=>tab.id)})).status,409);
  assert.equal(store.read().tabs.length,4);
 });
+
+test('タブ名変更は所属と順序を保持し、再読込後も残る', async t => {
+ const {call,store,path}=await setup(t);
+ const a=(await call('','POST',{name:'A'})).body.data;
+ await call('','POST',{name:'B'});
+ await call(`/${a.id}/contacts/demo-contact-line`,'PUT',{});
+ const before=store.read();
+ const result=await call(`/${a.id}`,'PATCH',{name:'  仕事  '});
+ assert.equal(result.status,200); assert.equal(result.body.data.name,'仕事');
+ const expected=structuredClone(before); expected.tabs[0].name='仕事';
+ assert.deepEqual(store.read(),expected);
+ assert.deepEqual((await createJsonStore(path)).read(),expected);
+ for(const body of [{name:''},{name:' '.repeat(5)},{name:'a'.repeat(41)},{name:5},{name:'X',extra:true},null]) assert.equal((await call(`/${a.id}`,'PATCH',body)).status,400);
+ assert.equal((await call('/missing','PATCH',{name:'X'})).status,404);
+ assert.deepEqual(store.read(),expected);
+});

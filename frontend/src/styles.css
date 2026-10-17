@@ -1742,3 +1742,10 @@ h1 span {
 /* ブランド名は意図した二行で表示する。 */
 .brand b { flex-shrink: 0; line-height: 1.15; letter-spacing: 0; white-space: nowrap; }
 .brand b > span { display: block; }
+
+.tab-rename-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-bottom: 18px; }
+.tab-rename-form label { flex: 1 1 140px; min-width: 0; }
+.tab-rename-form input { width: 100%; box-sizing: border-box; }
+
+.complete-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 10px; border: 1px solid currentColor; border-radius: 8px; font-size: calc(11px * var(--font-scale, 1)); flex-shrink: 0; }
+@media (max-width: 650px) { .conversation-header { flex-wrap: wrap; } .complete-button { white-space: nowrap; } }

@@ -9,6 +9,12 @@ export function createTabRepository(store) {
       (state.tabs ??= []).push(tab);
       return tab;
     }); },
+    rename(id, name) { return store.update(state => {
+      const tab = (state.tabs ?? []).find(tab => tab.id === id);
+      if (!tab) throw notFound();
+      tab.name = name;
+      return tab;
+    }); },
     reorder(tabIds, expectedOrder) { return store.update(state => {
       const tabs = state.tabs ?? [];
       if (tabs.length !== tabIds.length || tabs.some(tab => !tabIds.includes(tab.id)) ||
