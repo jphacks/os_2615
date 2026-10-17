@@ -6,6 +6,10 @@ import { invalidInput } from '../utils/errors.js';
 
 export function createContactsRouter(contacts, messages) {
   const router = Router();
+  router.patch('/:id/search-name', async (req, res) => {
+    if (Object.keys(req.query).length) throw invalidInput();
+    res.json({ data: await contacts.setSearchName(req.params.id, req.body) });
+  });
   router.patch('/:id/favorite', async (req, res) => {
     if (Object.keys(req.query).length) throw invalidInput();
     res.json({ data: await contacts.setFavorite(req.params.id, req.body) });

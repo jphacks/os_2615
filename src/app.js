@@ -2,6 +2,9 @@
 管理API・LINE専用Webhookを別ポートで起動し、Slack Socket Modeも同じ保存層へ接続する。
 */
 import 'dotenv/config';
+import { createTabRepository } from './repositories/tabRepository.js';
+import { createTabService } from './services/tabService.js';
+import { createTabsRouter } from './routes/tabs.js';
 import express from 'express';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,6 +53,7 @@ export function createApp(store, { providers = { line: createLineClient() } } = 
   app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.use('/api', express.json({ limit: '64kb' }));
   app.get('/api/health', (_req, res) => res.json({ data: { status: 'ok' } }));
+  app.use('/api/tabs', createTabsRouter(createTabService(createTabRepository(store))));
   app.use('/api/reminders', createRemindersRouter(createReminderService(createReminderRepository(store))));
   app.use('/api/messages', createMessagesRouter(createReplyService(createMessageRepository(store), providers)));
   app.use('/api/contacts', createContactsRouter(

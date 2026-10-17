@@ -17,8 +17,15 @@ function validateState(state) {
   for (const key of ['contacts', 'conversations', 'messages', 'reminders']) {
     if (new Set(state[key].map(row => row.id)).size !== state[key].length) throw storageError();
   }
+  if (state.tabs !== undefined && (!Array.isArray(state.tabs) ||
+      state.tabs.some(tab => !tab || typeof tab.id !== 'string' || typeof tab.name !== 'string' ||
+        !tab.name.trim() || tab.name.length > 40 || !Array.isArray(tab.contactIds) ||
+        new Set(tab.contactIds).size !== tab.contactIds.length ||
+        tab.contactIds.some(id => !state.contacts.some(contact => contact.id === id))) ||
+      new Set(state.tabs.map(tab => tab.id)).size !== state.tabs.length)) throw storageError();
   if (state.contacts.some(row => !['line', 'slack'].includes(row.platform) ||
       typeof row.displayName !== 'string' || typeof row.isFavorite !== 'boolean' ||
+      (row.searchName !== undefined && (typeof row.searchName !== 'string' || row.searchName.length > 100)) ||
       !Number.isFinite(Date.parse(row.lastMessageAt)) ||
       !state.conversations.some(item => item.contactId === row.id)) ||
       state.conversations.some(row => !state.contacts.some(item => item.id === row.contactId) ||

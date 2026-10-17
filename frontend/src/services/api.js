@@ -2,6 +2,12 @@ import { request } from "./http.js";
 const write = (path, method, body) =>
   request(path, { method, body: JSON.stringify(body) });
 export const api = {
+  searchName: (id, searchName) => write(`/contacts/${encodeURIComponent(id)}/search-name`, 'PATCH', { searchName }),
+  moveTab: (id, direction) => write(`/tabs/${encodeURIComponent(id)}/move`, 'POST', { direction }),
+  tabs: () => request('/tabs'),
+  createTab: (name) => write('/tabs', 'POST', { name }),
+  deleteTab: (id) => write(`/tabs/${encodeURIComponent(id)}`, 'DELETE', {}),
+  tabMember: (id, contactId, included) => write(`/tabs/${encodeURIComponent(id)}/contacts/${encodeURIComponent(contactId)}`, included ? 'PUT' : 'DELETE', {}),
   contacts: (filter = "all") =>
     request(`/contacts?filter=${encodeURIComponent(filter)}`),
   messages: (id) => request(`/contacts/${encodeURIComponent(id)}/messages`),

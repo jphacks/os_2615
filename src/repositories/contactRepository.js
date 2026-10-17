@@ -5,6 +5,14 @@ import { notFound } from '../utils/errors.js';
 
 export function createContactRepository(store) {
   return {
+    setSearchName(contactId, searchName) {
+      return store.update(state => {
+        const contact = state.contacts.find(item => item.id === contactId);
+        if (!contact) throw notFound();
+        contact.searchName = searchName;
+        return contact;
+      });
+    },
     setFavorite(contactId, isFavorite) {
       return store.update(state => {
         const contact = state.contacts.find(item => item.id === contactId);
