@@ -194,8 +194,19 @@ curl 'http://127.0.0.1:3000/api/contacts?filter=favorite'
 
 ## 次の段階
 
-Reminderの取得・設定・取消APIは未実装。
-未実装のHTTP APIは404を返す。
+Reminderの取得・設定・取消APIを実装済み。実APIモードのFrontendから確認できる。
+
+1. Backendを再起動し、会話の「後で返信」で未来の時刻を指定する。
+2. 「後で返信」一覧と会話に設定した時刻が表示されることを確認する。
+3. 設定時刻を過ぎてもpendingのまま対象に残り、画面で期限超過が目立つことを確認する。
+4. 再起動後も設定が残ること、取消すると対象から外れることを確認する。
+5. 設定後に返信し、成功時にReminderがdoneとなることを確認する。
+
+GET /api/remindersはpendingを返す。status=all/done/cancelledも指定できる。
+POSTは会話ごとにpendingを1件だけ保存し、新規201・更新200を返す。
+PATCHはcancelledのみ受け付け、doneの取消は409となる。
+API契約・Frontendファイルは変更していない。Backend 58件・Frontend 5件の自動テストが成功。
+実機での時刻表示・期限超過表示は上記の画面操作で確認する。
 自動テストは署名付きHTTPリクエスト、Boltイベント処理経路、外部APIのStubで検証している。
 LINEの実機テキスト・スタンプ受信とSlack DM受信は確認済み。実機での返信は上記手順で別途確認する。
 
