@@ -152,6 +152,7 @@ test('実Boltのイベント処理経路を通して受信でき、停止後は�
       app = this;
       this.client.auth.test = async () => authResponse;
       this.client.users.info = async () => ({ ok: true, user: { profile: { display_name: '佐藤' } } });
+      this.client.chat.postMessage = async ({ channel }) => ({ ok: true, channel, ts: '1792206000.000001' });
     }
     async start() { starts++; }
     async stop() { stops++; }
@@ -163,6 +164,11 @@ test('実Boltのイベント処理経路を通して受信でき、停止後は�
   assert.equal(options.deferInitialization, true);
   assert.equal(options.logger, slackLogger);
   assert.equal(await receiver.start(), false);
+  const sent = await receiver.sendText({ conversation: { platform: 'slack', platformConversationId: 'DTEST' },
+    contact: { platform: 'slack', platformUserId: 'T_TEST:U_PERSON' }, text: '返信テスト' });
+  assert.equal(sent.isFromMe, true);
+  assert.equal(sent.senderId, 'U_BOT');
+  assert.equal(sent.text, '返信テスト');
   let acknowledged = 0;
   const deliver = async override => {
     const input = args(override);
@@ -174,6 +180,7 @@ test('実Boltのイベント処理経路を通して受信でき、停止後は�
   await deliver({ user: 'U_BOT', ts: '1792198801.000001' });
   assert.equal(store.read().messages.length, 1);
   await receiver.stop();
+  await assert.rejects(receiver.sendText({}), error => error.code === 'PROVIDER_ERROR');
   await deliver({ ts: '1792198802.000001' });
   assert.equal(store.read().messages.length, 1);
   assert.equal(starts, 1);

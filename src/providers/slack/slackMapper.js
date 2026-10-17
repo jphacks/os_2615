@@ -3,6 +3,12 @@
 */
 import { invalidInput } from '../../utils/errors.js';
 
+function timestampFromTs(ts) {
+  if (typeof ts !== 'string' || !/^\d{1,12}\.\d{1,6}$/.test(ts)) throw invalidInput();
+  const [seconds, fraction] = ts.split('.');
+  return new Date(Number(seconds) * 1000 + Number(fraction.padEnd(3, '0').slice(0, 3))).toISOString();
+}
+
 export function mapSlackEvent(event, { teamId, botUserId, eventId, displayName = null } = {}) {
   if (event?.type !== 'message' || event.channel_type !== 'im' || event.subtype ||
       event.bot_id || event.bot_profile || event.user === botUserId) return null;
@@ -10,8 +16,7 @@ export function mapSlackEvent(event, { teamId, botUserId, eventId, displayName =
   if (typeof teamId !== 'string' || !teamId || typeof botUserId !== 'string' || !botUserId ||
       typeof event.user !== 'string' || !event.user || typeof event.ts !== 'string' ||
       !/^\d{1,12}\.\d{1,6}$/.test(event.ts)) throw invalidInput();
-  const [seconds, fraction] = event.ts.split('.');
-  const timestamp = new Date(Number(seconds) * 1000 + Number(fraction.padEnd(3, '0').slice(0, 3))).toISOString();
+  const timestamp = timestampFromTs(event.ts);
   const name = typeof displayName === 'string' && displayName.trim() ? displayName : null;
   const metadata = { teamId };
   if (typeof eventId === 'string') metadata.eventId = eventId;
@@ -25,5 +30,13 @@ export function mapSlackEvent(event, { teamId, botUserId, eventId, displayName =
       senderId: event.user, senderName: name ?? `Slackユーザー (${event.user})`,
       text: hasText ? event.text : '[未対応のメッセージ]', timestamp, isFromMe: false, metadata
     }
+  };
+}
+
+export function mapSlackSentMessage(response, { teamId, botUserId, text }) {
+  return {
+    platform: 'slack', messageType: 'text', platformMessageId: response.ts,
+    senderId: botUserId, senderName: '自分', text, timestamp: timestampFromTs(response.ts),
+    isFromMe: true, metadata: { teamId }
   };
 }

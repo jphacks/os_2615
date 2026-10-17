@@ -39,3 +39,12 @@ export function mapLineEvent(event, displayName = null) {
     }
   };
 }
+
+export function mapLineSentMessage(response, { senderId, text }) {
+  const id = response?.sentMessages?.[0]?.id;
+  if (typeof id !== 'string' || !id) throw invalidInput();
+  return {
+    platform: 'line', messageType: 'text', platformMessageId: id,
+    senderId, senderName: '自分', text, timestamp: new Date().toISOString(), isFromMe: true, metadata: {}
+  };
+}

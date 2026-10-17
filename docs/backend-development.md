@@ -53,6 +53,9 @@ curl http://127.0.0.1:3000/api/contacts/demo-contact-slack/messages
 - Slack Bolt + Socket ModeによるDM受信・共通形式への変換と永続化。
 - Slack Bot自身・他のBot・チャンネル投稿・グループDM・subtype付きイベントを除外。
 - Slack表示名取得・本文中の絵文字保持・メッセージtsと会話IDによる重複排除。
+- POST /api/messages/replyによるLINE Push・Slack DMへのテキスト返信。
+- Provider送信成功後の送信履歴保存・未返信解除・設定済みReminder完了。
+- 同じ会話への並行送信の拒否、送信中の新着・Reminder再設定の保護。
 
 ## LINE実機確認
 
@@ -124,12 +127,54 @@ Boltはイベントを自動ACKするため、保存失敗後の再配信は保�
 
 接続方式は[Slack Bolt公式Socket Modeガイド](https://docs.slack.dev/tools/bolt-js/concepts/socket-mode/)を参照。
 
+## 返信の実機確認
+
+1. サーバーを再起動し、SlackのSLACK_CONNECTEDを確認する。Tokenは受信確認時の4項目をそのまま使う。
+2. GET /api/contactsの実際のLINE・Slack Conversation.idをそれぞれ控える。
+   Contact.idとは異なる。demo-で始まる架空会話へは実送信しない。
+3. 各Conversationへ下記を1回ずつ実行する。会話IDは実際の値へ置き換える。
+
+```sh
+curl -i http://127.0.0.1:3000/api/messages/reply \
+  -H 'Content-Type: application/json' \
+  -d '{"conversationId":"実際の会話ID","text":"こねくとから返信テスト"}'
+```
+
+4. 201とdata.message.isFromMe: true、data.conversation.hasUnreplied: falseを確認する。
+5. LINE・Slackの実際の画面にも同じ本文が届いていることを確認する。
+6. 人物ごとの履歴APIに「自分」の送信履歴が追加され、未返信フィルタから外れることを確認する。
+7. 相手から再度送ると未返信に戻ることと、サーバー再起動後も送信履歴が残ることを確認する。
+
+LINEは保存userIdを宛先にPushする。replyTokenは使わず、送信前に/v2/bot/infoで公式アカウントIDを取得する。
+Slackは保存済みDM channel IDにchat.postMessageする。送信本文は空白・改行を維持し、上限は5000 UTF-16単位。
+両ProviderともAPIの生JSONはMapperで共通Messageへ変換し、models/message.jsで検証して保存する。
+新しいScope・環境変数は追加していない。
+
+成功201は外部APIの受理とローカル保存の成功を表す。端末での配信・閲覧は保証しない。
+送信中に新着が保存された場合は、成功201でもhasUnrepliedをtrueのまま残す。
+同じ会話の二重送信は409 REPLY_IN_PROGRESS。他の会話への送信は待たせない。
+送信失敗・Token未設定では、履歴・未返信・Reminderを変更しない。
+送信成功時は開始時点のpending Reminderをdoneにするが、途中の日時変更・取消は上書きしない。
+
+タイムアウト、送信APIの5xx、不正な成功レスポンス、送信後の保存失敗はDELIVERY_UNKNOWNとして返す。
+Frontendは入力文を残す。自動再送は行わず、送信先を確認してから手動で判断する。
+外部APIとJSON保存は1つのトランザクションにできないため、送信済みでも保存されない場合がある。
+この場合に履歴を自動復元する機能はMVP対象外。
+送信前の公式アカウント情報取得が失敗した場合はPush自体を行わず、PROVIDER_ERRORを返す。
+APIのタイムアウトは1リクエスト5秒。LINEの初回は公式アカウント情報取得とPushの2リクエストとなる。
+
+Frontend担当は既存のAPIクライアントのまま利用可能。実API接続時はfrontend/.envのVITE_USE_MOCK=falseを使う。
+今回Frontendファイルは変更していない。
+
+外部送信の仕様は[LINE公式リファレンス](https://developers.line.biz/en/reference/messaging-api/#send-push-message)と
+[Slack chat.postMessage公式リファレンス](https://docs.slack.dev/reference/methods/chat.postMessage/)を参照。
+
 ## 次の段階
 
-外部返信、お気に入りとReminderの更新APIは未実装。
+お気に入りとReminderの更新APIは未実装。
 未実装のHTTP APIは404を返す。
 自動テストは署名付きHTTPリクエスト、Boltイベント処理経路、外部APIのStubで検証している。
-LINEの実機テキスト・スタンプ受信は確認済み。Slackの実機確認は上記手順で別途行う。
+LINEの実機テキスト・スタンプ受信とSlack DM受信は確認済み。実機での返信は上記手順で別途確認する。
 
 data/はGit管理外。1つの保存ファイルを複数プロセスで同時に開かない。
 ファイル欠落時だけ空状態で起動し、破損時は起動を失敗させて既存ファイルを保持する。

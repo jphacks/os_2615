@@ -2,6 +2,17 @@
 共通受信データを保存し、Contactに紐づく会話履歴を取得する。
 */
 import { randomUUID } from 'node:crypto';
+import { createSentMessage } from '../models/message.js';
+import { notFound, invalidInput } from '../utils/errors.js';
+
+function refreshLatest(state, conversation, contact) {
+  const latest = state.messages.filter(item => item.conversationId === conversation.id)
+    .reduce((a, b) => Date.parse(b.timestamp) >= Date.parse(a.timestamp) ? b : a);
+  conversation.lastMessageId = latest.id;
+  conversation.updatedAt = latest.timestamp;
+  contact.lastMessageAt = latest.timestamp;
+  return latest;
+}
 
 function duplicate(state, incoming) {
   return state.messages.find(message => message.platform === incoming.platform &&
@@ -14,6 +25,35 @@ function duplicate(state, incoming) {
 
 export function createMessageRepository(store) {
   return {
+    getReplyContext(conversationId) {
+      const state = store.read();
+      const conversation = state.conversations.find(item => item.id === conversationId);
+      if (!conversation) throw notFound();
+      const contact = state.contacts.find(item => item.id === conversation.contactId);
+      if (!contact || contact.platform !== conversation.platform) throw invalidInput();
+      return { conversation, contact,
+        reminder: state.reminders.find(item => item.conversationId === conversationId && item.status === 'pending') ?? null };
+    },
+    saveReply(context, draft) {
+      return store.update(state => {
+        const conversation = state.conversations.find(item => item.id === context.conversation.id);
+        if (!conversation || draft.platform !== conversation.platform) throw invalidInput();
+        const contact = state.contacts.find(item => item.id === conversation.contactId);
+        if (!contact) throw invalidInput();
+        const currentLast = state.messages.find(item => item.id === conversation.lastMessageId);
+        const newIncoming = conversation.lastMessageId !== context.conversation.lastMessageId && currentLast?.isFromMe === false;
+        const message = createSentMessage(draft, conversation.id);
+        state.messages.push(message);
+        const latest = refreshLatest(state, conversation, contact);
+        conversation.hasUnreplied = newIncoming || !latest.isFromMe;
+        if (context.reminder) {
+          const reminder = state.reminders.find(item => item.id === context.reminder.id);
+          if (reminder?.status === 'pending' && reminder.remindAt === context.reminder.remindAt &&
+              reminder.messageId === context.reminder.messageId) reminder.status = 'done';
+        }
+        return { message, conversation };
+      });
+    },
     isDuplicate(incoming) { return Boolean(duplicate(store.read(), incoming)); },
     receive(incoming) {
       return store.update(state => {
@@ -38,12 +78,9 @@ export function createMessageRepository(store) {
         const message = { ...incoming.message, id: randomUUID(), conversationId: conversation.id,
           senderName: incoming.displayName ?? contact.displayName };
         state.messages.push(message);
-        const latest = state.messages.filter(item => item.conversationId === conversation.id)
-          .reduce((a, b) => Date.parse(b.timestamp) >= Date.parse(a.timestamp) ? b : a);
-        conversation.lastMessageId = latest.id;
-        conversation.updatedAt = latest.timestamp;
-        conversation.hasUnreplied = !latest.isFromMe;
-        contact.lastMessageAt = latest.timestamp;
+        const latest = refreshLatest(state, conversation, contact);
+        // 遅延イベントで、返信中の新着に対して残した未返信状態を消さない。
+        if (latest.id === message.id) conversation.hasUnreplied = true;
         return message;
       });
     },
