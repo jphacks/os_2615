@@ -2,7 +2,7 @@
   "id": "/",
   "name": "こねくと",
   "short_name": "こねくと",
-  "description": "LINEとSlackの連絡を、一つのInboxで管理・返信。",
+  "description": "一つのInboxですべて管理・返信。",
   "lang": "ja",
   "start_url": "/",
   "scope": "/",
