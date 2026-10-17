@@ -483,12 +483,6 @@ export default function App() {
                   </span>
                 </div>
                 <div className="eyebrow">A LITTLE CLOSER.</div>
-                <h2>会話のつづきを、ここから。</h2>
-                <p>
-                  左の一覧から相手を選んで、
-                  <br />
-                  LINEもSlackも、この場所で返信しましょう。
-                </p>
                 <div className="welcome-platforms">
                   <Platform value="line" />
                   <span>＋</span>
@@ -689,9 +683,6 @@ export default function App() {
             )}
           </section>
         </div>
-        <footer className="page-footer">
-          ひとつの場所から、つながりを大切に。<span>こねくと / KONEKUTO</span>
-        </footer>
       </main>
       {notice && (
         <div className="toast" role="status">
