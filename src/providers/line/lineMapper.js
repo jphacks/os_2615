@@ -19,6 +19,9 @@ export function mapLineEvent(event, displayName = null) {
     if (typeof message.text !== 'string') throw invalidInput();
     messageType = 'text';
     text = message.text;
+  } else if (message.type === 'image' && message.contentProvider?.type !== 'external') {
+    messageType = 'image';
+    text = '[画像]';
   } else if (message.type === 'sticker') {
     messageType = 'sticker';
     text = '[スタンプが送信されました]';

@@ -102,7 +102,7 @@ test('スタンプのkeywords有無と未対応typeを安全な表示へ変換�
     packageId: 'package', stickerId: 'sticker', stickerResourceType: 'STATIC', ...extra } });
   assert.equal((await post([sticker('s1', { keywords: ['happy', 'smile'] }), sticker('s2'),
     sticker('s3', { keywords: 'not-an-array' }),
-    event('image1', { message: { type: 'image', id: 'image1' } })])).status, 200);
+    event('video1', { message: { type: 'video', id: 'video1' } })])).status, 200);
   const messages = store.read().messages;
   assert.deepEqual(messages[0].metadata.keywords, ['happy', 'smile']);
   assert.equal(messages[0].text, '[スタンプが送信されました]');

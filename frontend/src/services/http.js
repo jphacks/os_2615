@@ -9,13 +9,13 @@ export async function request(path, options = {}) {
   } catch {
     throw Object.assign(
       new Error(
-        options.method === "POST" && path === "/messages/reply"
+        options.method === "POST" && path.startsWith("/messages/reply")
           ? "送信結果を確認できません。送信先を確認してから再送してください。"
           : "接続できません。Backendの起動状態を確認してください。",
       ),
       {
         code:
-          options.method === "POST" && path === "/messages/reply"
+          options.method === "POST" && path.startsWith("/messages/reply")
             ? "DELIVERY_UNKNOWN"
             : "NETWORK_ERROR",
       },
@@ -27,13 +27,13 @@ export async function request(path, options = {}) {
   } catch {
     throw Object.assign(
       new Error(
-        path === "/messages/reply"
+        path.startsWith("/messages/reply")
           ? "送信結果を確認できません。送信先を確認してください。"
           : "APIから正しいJSONが返されませんでした。",
       ),
       {
         code:
-          path === "/messages/reply" ? "DELIVERY_UNKNOWN" : "INVALID_RESPONSE",
+          path.startsWith("/messages/reply") ? "DELIVERY_UNKNOWN" : "INVALID_RESPONSE",
       },
     );
   }
@@ -45,13 +45,13 @@ export async function request(path, options = {}) {
   if (!result || !Object.hasOwn(result, "data"))
     throw Object.assign(
       new Error(
-        path === "/messages/reply"
+        path.startsWith("/messages/reply")
           ? "送信結果を確認できません。送信先を確認してください。"
           : "APIレスポンスの形式を確認してください。",
       ),
       {
         code:
-          path === "/messages/reply" ? "DELIVERY_UNKNOWN" : "INVALID_RESPONSE",
+          path.startsWith("/messages/reply") ? "DELIVERY_UNKNOWN" : "INVALID_RESPONSE",
       },
     );
   return result;

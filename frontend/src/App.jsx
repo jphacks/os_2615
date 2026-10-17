@@ -17,6 +17,9 @@ import {
 import { api } from "./services/api";
 import { matchesContact } from "./services/contactSearch.js";
 import ContactSearchName from "./components/ContactSearchName.jsx";
+import ImageReply, { MessageImage } from "./components/ImageReply.jsx";
+import Settings from "./components/Settings.jsx";
+import InstallApp from "./components/InstallApp.jsx";
 import CustomTabs from "./components/CustomTabs.jsx";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
 import ReminderAlerts from "./components/ReminderAlerts.jsx";
@@ -327,7 +330,9 @@ export default function App() {
         </div>
       </aside>
       <main>
+        <InstallApp />
         <section className="heading">
+          <Settings />
           <div className="date">
             {new Date(now).toLocaleDateString("ja-JP", {
               month: "long",
@@ -610,7 +615,7 @@ export default function App() {
                               {m.messageType === "sticker" && (
                                 <span className="sticker-icon">☺</span>
                               )}
-                              {m.text}
+                              {m.messageType === "image" ? <MessageImage key={m.media?.id ?? m.id} media={m.media} /> : m.text}
                               {m.messageType === "sticker" &&
                                 Array.isArray(m.metadata?.keywords) &&
                                 m.metadata.keywords.length > 0 && (
@@ -675,6 +680,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                  {selected.contact.platform === "line" && <ImageReply key={selected.conversation.id} conversationId={selected.conversation.id} sending={sending} setSending={setSending} onError={setError} onSent={async () => { setNotice("画像を送信しました"); await refresh(); }} />}
                   <p>
                     <i />
                     {selected.contact.platform === "line" ? "LINE" : "Slack"}

@@ -1,7 +1,7 @@
 /*
 BoltのSocket Modeを起動し、DMを共通Serviceへ渡す。TokenやSDKの生ログは出さない。
 */
-import { App, LogLevel } from '@slack/bolt';
+import { App, LogLevel, SocketModeReceiver } from '@slack/bolt';
 import { logEvent } from '../../utils/logger.js';
 import { createSlackClient } from './slackClient.js';
 import { mapSlackEvent } from './slackMapper.js';
@@ -37,13 +37,43 @@ export function createSlackMessageHandler(messages, { teamId, botUserId, getDisp
 export function createSlackReceiver(messages, {
   botToken = process.env.SLACK_BOT_TOKEN,
   appToken = process.env.SLACK_APP_TOKEN,
-  AppClass = App
+  AppClass = App,
+  ReceiverClass = SocketModeReceiver,
+  reconnectDelayMs = 5000
 } = {}) {
   let app;
   let stopped = false;
   let started = false;
   let replyClient;
   const pending = new Set();
+  let reconnectTimer;
+  let connecting = false;
+  let readyClient;
+  function scheduleReconnect() {
+    if (stopped || reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined;
+      void connectSocket();
+    }, reconnectDelayMs);
+    reconnectTimer.unref?.();
+  }
+  async function connectSocket() {
+    if (stopped || connecting) return false;
+    connecting = true;
+    try {
+      await app.start();
+      if (stopped) { await app.stop().catch(() => {}); return false; }
+      clearTimeout(reconnectTimer); reconnectTimer = undefined;
+      replyClient = readyClient;
+      logEvent('SLACK_CONNECTED');
+      return true;
+    } catch {
+      replyClient = undefined;
+      logEvent('SLACK_START_FAILED');
+      scheduleReconnect();
+      return false;
+    } finally { connecting = false; }
+  }
   return {
     async sendText(input) {
       if (!botToken?.trim() || !appToken?.trim()) {
@@ -60,10 +90,20 @@ export function createSlackReceiver(messages, {
         return false;
       }
       try {
+        const clientOptions = { timeout: 10000, retryConfig: { retries: 0 }, rejectRateLimitedCalls: true };
+        const receiver = new ReceiverClass({ appToken, logger: slackLogger, autoReconnectEnabled: false,
+          installerOptions: { clientOptions } });
+        receiver.client.on('disconnected', () => {
+          replyClient = undefined;
+          if (!stopped && !connecting && readyClient) {
+            logEvent('SLACK_DISCONNECTED');
+            scheduleReconnect();
+          }
+        });
         app = new AppClass({
-          token: botToken, appToken, socketMode: true, ignoreSelf: true,
+          token: botToken, appToken, socketMode: true, receiver, ignoreSelf: true,
           deferInitialization: true, logger: slackLogger,
-          clientOptions: { timeout: 5000, retryConfig: { retries: 0 }, rejectRateLimitedCalls: true }
+          clientOptions
         });
         app.error(async () => logEvent('SLACK_RECEIVE_FAILED'));
         // 初期化中の認証エラーもこのtry内で受け、HTTPサーバーは維持する。
@@ -78,11 +118,10 @@ export function createSlackReceiver(messages, {
           pending.add(operation);
           try { await operation; } finally { pending.delete(operation); }
         });
-        await app.start();
-        if (stopped) { await app.stop(); return false; }
-        replyClient = client;
-        logEvent('SLACK_CONNECTED');
-        return true;
+        readyClient = client;
+        const connected = await connectSocket();
+        if (!connected && app) await app.stop().catch(() => {});
+        return connected;
       } catch {
         replyClient = undefined;
         logEvent('SLACK_START_FAILED');
@@ -93,6 +132,7 @@ export function createSlackReceiver(messages, {
     async stop() {
       if (stopped) return;
       stopped = true;
+      clearTimeout(reconnectTimer); reconnectTimer = undefined;
       replyClient = undefined;
       if (app) {
         try { await app.stop(); } catch { logEvent('SLACK_ERROR'); }
