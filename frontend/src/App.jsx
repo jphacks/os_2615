@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { api, isMock } from "./services/api";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
+import ReminderAlerts from "./components/ReminderAlerts.jsx";
 import { localDateTime } from "./components/reminderDate.js";
 const filters = [
   ["all", "すべて", Inbox],
@@ -125,11 +126,14 @@ export default function App() {
   useEffect(() => {
     loadList();
     const t = setInterval(() => {
-      setNow(Date.now());
       loadList();
       if (activeRef.current) loadDetail(activeRef.current);
     }, 5000);
     return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -259,13 +263,12 @@ export default function App() {
       <aside className="sidebar">
         <a href="./" className="brand">
           <span>
-            <Link2 size={23} />
+            <img src="/konekuto-icon.svg" alt="" width="44" height="44" />
           </span>
           <b>
             こねくと<i>.</i>
           </b>
         </a>
-        <div className="workspace-label">YOUR WORKSPACE</div>
         <nav aria-label="受信箱フィルタ">
           {filters.map(([f, label, Icon]) => (
             <button
@@ -671,6 +674,7 @@ export default function App() {
           </section>
         </div>
       </main>
+      <ReminderAlerts items={items} now={now} onOpen={open} />
       {notice && (
         <div className="toast" role="status">
           <Check size={16} />
