@@ -14,7 +14,7 @@ import {
   X,
   Bell,
 } from "lucide-react";
-import { api, isMock } from "./services/api";
+import { api } from "./services/api";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
 import { localDateTime } from "./components/reminderDate.js";
 const filters = [
@@ -173,7 +173,7 @@ export default function App() {
         draftRef.current = { ...draftRef.current, [id]: "" };
         setDrafts(draftRef.current);
       }
-      setNotice(isMock ? "デモの会話に返信を追加しました" : "送信しました");
+      setNotice("送信しました");
       await refresh();
     } catch (e) {
       setError(
@@ -292,9 +292,7 @@ export default function App() {
             <i />
           </div>
           <small>
-            {isMock
-              ? "サンプルデータで体験中"
-              : "外部サービスの接続状態は未確認"}
+            外部サービスの接続状態は未確認
           </small>
           <div className="profile">
             <span>K</span>
@@ -318,15 +316,6 @@ export default function App() {
             </small>
           </div>
         </section>
-        {isMock && (
-          <div className="demo-banner">
-            <span>
-              <b>DEMO</b>
-              サンプルの会話を表示しています。返信はLINE・Slackに送信されません。
-            </span>
-            <small>操作はこのブラウザに保存</small>
-          </div>
-        )}
         {error && (
           <div className="error" role="alert">
             <span>{error}</span>
@@ -457,7 +446,7 @@ export default function App() {
             </div>
             <div className="list-footer">
               <i />
-              {isMock ? "デモデータを表示中" : "5秒ごとに更新"}
+              5秒ごとに更新
               <span>{items.length} conversations</span>
             </div>
           </section>
@@ -662,7 +651,7 @@ export default function App() {
                   <p>
                     <i />
                     {selected.contact.platform === "line" ? "LINE" : "Slack"}
-                    {isMock ? " のデモ会話に追加されます" : " に送信されます"}
+                     に送信されます
                     <span>改行は Enter</span>
                   </p>
                 </form>

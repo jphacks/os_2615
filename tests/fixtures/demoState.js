@@ -1,10 +1,4 @@
-/*
-明示実行時だけ架空のLINE・Slack会話を投入する。既存データは上書きしない。
-*/
-import { fileURLToPath } from 'node:url';
-import { createJsonStore } from '../src/repositories/jsonStore.js';
-import { logEvent } from '../src/utils/logger.js';
-
+/* 自動テスト専用の架空データ。本番ストレージには投入しない。 */
 export function demoState() {
   const state = { version: 1, contacts: [], conversations: [], messages: [], reminders: [] };
   for (const [platform, name, text] of [
@@ -24,21 +18,4 @@ export function demoState() {
       isFromMe: false, metadata: {} });
   }
   return state;
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    const store = await createJsonStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
-    await store.update(state => {
-      if (['contacts', 'conversations', 'messages', 'reminders'].some(key => state[key].length)) {
-        throw new Error('Existing data');
-      }
-      Object.assign(state, demoState());
-    });
-    console.log('架空データを保存しました。実サービスには接続していません。');
-  } catch {
-    logEvent('STARTUP_FAILED');
-    console.error('投入を中止しました。既存データまたは保存先を確認してください。');
-    process.exitCode = 1;
-  }
 }

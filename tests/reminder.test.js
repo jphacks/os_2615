@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createApp } from '../src/app.js';
 import { createJsonStore } from '../src/repositories/jsonStore.js';
-import { demoState } from '../scripts/seedDemo.js';
+import { demoState } from './fixtures/demoState.js';
 
 const input = () => ({ conversationId: 'demo-conversation-line', messageId: 'demo-message-line',
   remindAt: new Date(Date.now() + 3600000).toISOString() });

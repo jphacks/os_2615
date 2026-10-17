@@ -10,7 +10,7 @@ import { createApp } from '../src/app.js';
 import { createJsonStore } from '../src/repositories/jsonStore.js';
 import { createMessageRepository } from '../src/repositories/messageRepository.js';
 import { createMessageService } from '../src/services/messageService.js';
-import { demoState } from '../scripts/seedDemo.js';
+import { demoState } from './fixtures/demoState.js';
 
 async function setup(t, { io, providers = {} } = {}) {
   const dir = await fs.mkdtemp(join(tmpdir(), 'konekuto-favorite-'));
