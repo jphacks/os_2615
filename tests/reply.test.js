@@ -15,7 +15,7 @@ import { createLineClient } from '../src/providers/line/lineClient.js';
 import { createSlackClient } from '../src/providers/slack/slackClient.js';
 import { createSlackReceiver } from '../src/providers/slack/slackEvents.js';
 import { AppError } from '../src/utils/errors.js';
-import { demoState } from '../scripts/seedDemo.js';
+import { demoState } from './fixtures/demoState.js';
 
 const lineId = 'demo-conversation-line';
 const slackId = 'demo-conversation-slack';

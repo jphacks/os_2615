@@ -11,7 +11,7 @@ import { createApp, createWebhookApp } from '../src/app.js';
 import { createJsonStore } from '../src/repositories/jsonStore.js';
 import { createLineClient } from '../src/providers/line/lineClient.js';
 import { mapLineEvent } from '../src/providers/line/lineMapper.js';
-import { demoState } from '../scripts/seedDemo.js';
+import { demoState } from './fixtures/demoState.js';
 
 const channelSecret = 'test-only-channel-secret';
 function event(id = 'message-1', overrides = {}) {

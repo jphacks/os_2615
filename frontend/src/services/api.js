@@ -1,9 +1,13 @@
-import { createMockApi } from "./mockApi.js";
 import { request } from "./http.js";
-export const isMock = import.meta.env.VITE_USE_MOCK !== "false";
 const write = (path, method, body) =>
   request(path, { method, body: JSON.stringify(body) });
-const live = {
+export const api = {
+  searchName: (id, searchName) => write(`/contacts/${encodeURIComponent(id)}/search-name`, 'PATCH', { searchName }),
+  moveTab: (id, direction) => write(`/tabs/${encodeURIComponent(id)}/move`, 'POST', { direction }),
+  tabs: () => request('/tabs'),
+  createTab: (name) => write('/tabs', 'POST', { name }),
+  deleteTab: (id) => write(`/tabs/${encodeURIComponent(id)}`, 'DELETE', {}),
+  tabMember: (id, contactId, included) => write(`/tabs/${encodeURIComponent(id)}/contacts/${encodeURIComponent(contactId)}`, included ? 'PUT' : 'DELETE', {}),
   contacts: (filter = "all") =>
     request(`/contacts?filter=${encodeURIComponent(filter)}`),
   messages: (id) => request(`/contacts/${encodeURIComponent(id)}/messages`),
@@ -19,14 +23,3 @@ const live = {
     }),
   reminders: () => request("/reminders?status=pending"),
 };
-const demoStorage = {
-  getItem: (key) => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (key, value) => localStorage.setItem(key, value),
-};
-export const api = isMock ? createMockApi(demoStorage) : live;

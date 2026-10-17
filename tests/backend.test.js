@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createJsonStore } from '../src/repositories/jsonStore.js';
 import { createApp } from '../src/app.js';
-import { demoState } from '../scripts/seedDemo.js';
+import { demoState } from './fixtures/demoState.js';
 
 async function setup(t, options) {
   const dir = await fs.mkdtemp(join(tmpdir(), 'konekuto-'));

@@ -5,6 +5,12 @@ import { invalidInput } from '../utils/errors.js';
 
 export function createContactService(repository) {
   return {
+    setSearchName(contactId, input) {
+      if (!input || typeof input !== 'object' || Array.isArray(input) ||
+          Object.keys(input).length !== 1 || typeof input.searchName !== 'string' ||
+          input.searchName.trim().length > 100) throw invalidInput();
+      return repository.setSearchName(contactId, input.searchName.trim());
+    },
     setFavorite(contactId, input) {
       if (typeof contactId !== 'string' || !contactId.trim() || !input ||
           typeof input !== 'object' || Array.isArray(input) ||

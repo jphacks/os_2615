@@ -259,3 +259,36 @@ Slack受信はSocket ModeのためHTTP受信ルートを設けない。
 4. 送信失敗時に入力と未返信が残る。
 5. スタンプのkeywordsなし、空一覧、404、期限超過Reminderを表示できる。
 6. 再起動後も履歴・お気に入り・Reminderが残る。
+
+## カスタムタブ
+
+既存の4フィルタは維持する。ユーザー作成タブは { id, name, contactIds: string[] }。
+Contactは複数タブへ所属可能。LINE/SlackのContactは別々に選ぶ。
+
+- GET /api/tabs: 200 { data: Tab[] }、作成順。
+- POST /api/tabs: { name }、前後空白を除き1〜40文字。201 { data: Tab }。
+- PUT /api/tabs/:id/contacts/:contactId: 本文なしまたは空オブジェクトで登録。200 { data: Tab }。
+- DELETE /api/tabs/:id/contacts/:contactId: 本文なしまたは空オブジェクトで解除。200 { data: Tab }。
+- DELETE /api/tabs/:id: 200 { data: { id } }。Contactや会話履歴は削除しない。
+
+所属操作は同じ指定を再送しても重複しない。不在タブ・Contactは404。
+余分な入力・クエリは400。保存失敗は500 STORAGE_ERRORで既存状態を維持する。
+旧ストレージにtabsがなくても読み込める。初回タブ作成で追加保存する。
+このMVPでは同じBackendに接続する端末間で共有する。
+
+### タブの並び替え
+
+POST /api/tabs/:id/move に { "direction": "previous" } または { "direction": "next" } を送る。
+firstで先頭、lastで末尾へ移動する。他のタブ同士の相対順は保持する。
+保存時点の並び順で隣のタブと入れ替え、200 { data: Tab[] } を返す。
+先頭のprevious・末尾のnextは順番を変えず成功する。不在IDは404、不正入力は400。
+メンバーの変更を上書きせず順番だけを保存する。新規タブは末尾へ追加する。
+
+## 検索用の名前
+
+Contactに任意のsearchName（文字列、最大100文字）を追加する。旧データでは未設定でもよい。
+PATCH /api/contacts/:id/search-name に { "searchName": "おかばやしまひろ 岡林真広" } を送る。
+前後の空白を除いて保存し、200 { data: Contact } を返す。空文字で解除できる。
+表示名・外部サービスの名前・会話状態は変更しない。新着受信時もsearchNameを保持する。
+Frontendは表示名とsearchNameを検索し、かな・幅・大小文字・空白の違いを吸収する。
+漢字の読みは自動推定せず、ユーザーが読み・別表記を登録する。

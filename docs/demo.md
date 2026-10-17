@@ -33,8 +33,7 @@ Macでは http://127.0.0.1:5173/ を開く。
 端末間通信が制限されたWi-Fiではアクセスできない場合がある。
 
 ルート.envにはLINE/Slackの4つの認証情報を設定する。Frontendには認証情報を置かない。
-frontend/.envには VITE_USE_MOCK=false を設定し、変更後にViteを再起動する。
-画面にDEMOが表示されていたら実サービスとは接続していない。
+Frontendは常に実APIへ接続する。Mockモードの切替設定は不要。
 .envとdata/はGit管理外。別の開発端末には自動共有されない。
 依存関係が未導入ならルートとfrontendでそれぞれnpm installを行う。
 
@@ -85,18 +84,20 @@ LINE/Slackは人ごとに独立して扱い、同一人物の自動統合はし�
 - 2台の端末からアクセス・送信
 - Backend停止時のエラーと入力文保持、復旧後の手動再送成功
 
-自動確認: Backend 58件、Frontend 8件のテスト成功、Frontendビルド成功。
+自動確認: Backend 58件、Frontend 4件のテスト成功、Frontendビルド成功。
 最新版の配色と文言変更後は、本番前に画面を再読み込みして見え方を確認する。
 
 ## 復旧
 
-- DEMO表示: frontend/.envのVITE_USE_MOCK=falseを確認してViteを再起動する。
+- 古いDEMO表示: 最新コードでViteを再起動し、ブラウザを再読み込みする。
 - API/JSONエラー: Backend起動とhealthを確認し、復旧後「再取得」を押す。
 - 送信結果不明: まずLINE/Slack側で到達を確認する。自動再送や連打を避け、未着を確認して手動再送する。
 - LINE新着が来ない: ngrokがonlineか、URLと /webhooks/line が一致するかを確認する。/webhook/lineは誤り。
 - Slack新着が来ない: BackendのSocket Mode接続を確認する。同じSlack Appを使う旧検証プロセスを同時起動しない。
 - ポート使用中: 既存ターミナルを確認し、同じサーバーを重複起動しない。
 - 別端末から開けない: Macの現在のIP、同一ネットワーク、Viteのhost指定を確認する。
-- 保存エラー: data/store.jsonを削除・seedで上書きしない。サーバー停止後にデータを退避して原因を調べる。
+- 保存エラー: data/内のファイルを削除・上書きしない。サーバー停止後にdata/全体を退避して原因を調べる。分割後はstore.json単体では履歴を復元できない。
 
 デモ直前には.envやTokenを画面共有しない。保存済み履歴はデモ準備のために無断削除しない。
+
+保存形式と移行・バックアップの詳細は [storage.md](storage.md) を参照。

@@ -23,16 +23,8 @@ curl http://127.0.0.1:3000/api/health
 curl http://127.0.0.1:3000/api/contacts
 ```
 
-初期Inboxは空。架空の会話で確認する場合はサーバーを止めてから明示実行する。
-
-```sh
-npm run seed:demo
-npm start
-```
-
-既存データがある場合はseedを拒否する。起動中に別プロセスでseedを実行しない。
-架空データの送信先は実際には存在しない。実サービス連携前は専用の検証用保存先でのみ使い、
-実データと混ぜない。
+初期Inboxは空。LINE・Slackの実メッセージを受信して確認する。
+架空データの投入コマンドとFrontendのMockモードは削除済み。テスト用データはtests/fixtures/内でのみ使用する。
 
 ```sh
 curl 'http://127.0.0.1:3000/api/contacts?filter=unreplied'
@@ -164,7 +156,7 @@ Frontendは入力文を残す。自動再送は行わず、送信先を確認し
 送信前の公式アカウント情報取得が失敗した場合はPush自体を行わず、PROVIDER_ERRORを返す。
 APIのタイムアウトは1リクエスト5秒。LINEの初回は公式アカウント情報取得とPushの2リクエストとなる。
 
-Frontend担当は既存のAPIクライアントのまま利用可能。実API接続時はfrontend/.envのVITE_USE_MOCK=falseを使う。
+Frontend担当は既存のAPIクライアントのまま利用可能。Frontendは常に実APIへ接続し、切替用の環境変数は不要。
 今回Frontendファイルは変更していない。
 
 外部送信の仕様は[LINE公式リファレンス](https://developers.line.biz/en/reference/messaging-api/#send-push-message)と

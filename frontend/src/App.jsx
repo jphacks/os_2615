@@ -14,10 +14,14 @@ import {
   X,
   Bell,
 } from "lucide-react";
-import { api, isMock } from "./services/api";
+import { api } from "./services/api";
+import { matchesContact } from "./services/contactSearch.js";
+import ContactSearchName from "./components/ContactSearchName.jsx";
+import CustomTabs from "./components/CustomTabs.jsx";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
+import ReminderAlerts from "./components/ReminderAlerts.jsx";
 import { localDateTime } from "./components/reminderDate.js";
-const filters = [
+const baseFilters = [
   ["all", "すべて", Inbox],
   ["unreplied", "未返信", MessageCircle],
   ["later", "後で返信", Clock3],
@@ -56,6 +60,12 @@ function Avatar({ contact: c }) {
   );
 }
 export default function App() {
+  const [tabs, setTabs] = useState([]);
+  const [creatingTab, setCreatingTab] = useState(false);
+  const filters = [...baseFilters, ...tabs.map(tab => [`tab:${tab.id}`, tab.name, Inbox])];
+  const matchesFilter = (item, value) => value.startsWith("tab:")
+    ? Boolean(tabs.find(tab => `tab:${tab.id}` === value)?.contactIds.includes(item.contact.id))
+    : matches(item, value);
   const [items, setItems] = useState([]),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
@@ -83,8 +93,19 @@ export default function App() {
   async function loadList() {
     const v = ++listVersion.current;
     try {
-      const r = await api.contacts();
-      if (v === listVersion.current) setItems(r.data);
+      const [contactsResult, tabsResult] = await Promise.allSettled([api.contacts(), api.tabs()]);
+      if (v !== listVersion.current) return;
+      if (contactsResult.status === "fulfilled") setItems(contactsResult.value.data);
+      else setError(contactsResult.reason.message);
+      if (tabsResult.status === "fulfilled") {
+        const custom = tabsResult.value;
+        setTabs(custom.data);
+        setFilter(current => current.startsWith("tab:") && !custom.data.some(tab => `tab:${tab.id}` === current) ? "all" : current);
+      } else if (contactsResult.status === "fulfilled") {
+        setError(tabsResult.reason.code === "NOT_FOUND"
+          ? "タブAPIが見つかりません。Backendを再起動してから再取得してください。"
+          : `タブを取得できませんでした。${tabsResult.reason.message}`);
+      }
     } catch (e) {
       if (v === listVersion.current) setError(e.message);
     } finally {
@@ -125,11 +146,14 @@ export default function App() {
   useEffect(() => {
     loadList();
     const t = setInterval(() => {
-      setNow(Date.now());
       loadList();
       if (activeRef.current) loadDetail(activeRef.current);
     }, 5000);
     return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -173,7 +197,7 @@ export default function App() {
         draftRef.current = { ...draftRef.current, [id]: "" };
         setDrafts(draftRef.current);
       }
-      setNotice(isMock ? "デモの会話に返信を追加しました" : "送信しました");
+      setNotice("送信しました");
       await refresh();
     } catch (e) {
       setError(
@@ -245,11 +269,11 @@ export default function App() {
   }
   const visible = items.filter(
     (i) =>
-      matches(i, filter) &&
-      i.contact.displayName.toLowerCase().includes(query.toLowerCase()),
+      matchesFilter(i, filter) &&
+      matchesContact(i.contact, query),
   );
   const counts = Object.fromEntries(
-    filters.map(([f]) => [f, items.filter((i) => matches(i, f)).length]),
+    filters.map(([f]) => [f, items.filter((i) => matchesFilter(i, f)).length]),
   );
   const due = items.filter(
     (i) => i.reminder && Date.parse(i.reminder.remindAt) <= now,
@@ -259,24 +283,24 @@ export default function App() {
       <aside className="sidebar">
         <a href="./" className="brand">
           <span>
-            <Link2 size={23} />
+            <img src="/konekuto-icon.svg" alt="" width="44" height="44" />
           </span>
           <b>
             こねくと<i>.</i>
           </b>
         </a>
-        <div className="workspace-label">YOUR WORKSPACE</div>
         <nav aria-label="受信箱フィルタ">
-          {filters.map(([f, label, Icon]) => (
-            <button
-              key={f}
-              className={`nav-item ${filter === f ? "chosen" : ""}`}
-              onClick={() => setFilter(f)}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-              <small>{counts[f]}</small>
-            </button>
+          {[baseFilters, filters.slice(baseFilters.length)].map((group, index) => (group.length > 0 || index === 1) && (
+            <div className="sidebar-tab-group" role="group" aria-label={index === 0 ? "標準フィルタ" : "ユーザー作成タブ"} key={index}>
+              {group.map(([f, label, Icon]) => (
+                <button key={f} className={`nav-item ${filter === f ? "chosen" : ""}`} onClick={() => setFilter(f)}>
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  <small>{counts[f]}</small>
+                </button>
+              ))}
+              {index === 1 && <button className="nav-item add-tab-button" onClick={() => setCreatingTab(true)}>＋ タブを追加</button>}
+            </div>
           ))}
         </nav>
         <div className="sidebar-bottom">
@@ -292,9 +316,7 @@ export default function App() {
             <i />
           </div>
           <small>
-            {isMock
-              ? "サンプルデータで体験中"
-              : "外部サービスの接続状態は未確認"}
+            外部サービスの接続状態は未確認
           </small>
           <div className="profile">
             <span>K</span>
@@ -318,15 +340,6 @@ export default function App() {
             </small>
           </div>
         </section>
-        {isMock && (
-          <div className="demo-banner">
-            <span>
-              <b>DEMO</b>
-              サンプルの会話を表示しています。返信はLINE・Slackに送信されません。
-            </span>
-            <small>操作はこのブラウザに保存</small>
-          </div>
-        )}
         {error && (
           <div className="error" role="alert">
             <span>{error}</span>
@@ -348,7 +361,7 @@ export default function App() {
           <section className="inbox-panel" aria-label="会話一覧">
             <div className="list-heading">
               <h2>
-                {filters.find((f) => f[0] === filter)[1]}の会話{" "}
+                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}の会話{" "}
                 <span>{visible.length}</span>
               </h2>
               <button
@@ -374,16 +387,18 @@ export default function App() {
               )}
             </label>
             <div className="mobile-tabs">
-              {filters.map(([f, label]) => (
-                <button
-                  key={f}
-                  className={filter === f ? "chosen" : ""}
-                  onClick={() => setFilter(f)}
-                >
-                  {label}
-                </button>
+              {[baseFilters, filters.slice(baseFilters.length)].map((group, index) => (group.length > 0 || index === 1) && (
+                <div className="tab-group" role="group" aria-label={index === 0 ? "標準フィルタ" : "ユーザー作成タブ"} key={index}>
+                  {group.map(([f, label]) => (
+                    <button key={f} className={filter === f ? "chosen" : ""} onClick={() => setFilter(f)}>
+                      {label}
+                    </button>
+                  ))}
+                  {index === 1 && <button className="add-tab-button" onClick={() => setCreatingTab(true)}>＋ タブを追加</button>}
+                </div>
               ))}
             </div>
+            <CustomTabs creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
@@ -393,12 +408,12 @@ export default function App() {
                   <h3>
                     {query
                       ? "一致する名前がありません"
-                      : "会話はまだありません"}
+                      : filter.startsWith("tab:") ? "このタブに相手が登録されていません" : "会話はまだありません"}
                   </h3>
                   <p>
                     {query
                       ? "別の名前で検索してください。"
-                      : "会話が届くと、ここに表示されます。"}
+                      : filter.startsWith("tab:") ? "上のメンバー編集から相手を選んでください。" : "会話が届くと、ここに表示されます。"}
                   </p>
                 </div>
               ) : (
@@ -457,7 +472,7 @@ export default function App() {
             </div>
             <div className="list-footer">
               <i />
-              {isMock ? "デモデータを表示中" : "5秒ごとに更新"}
+              5秒ごとに更新
               <span>{items.length} conversations</span>
             </div>
           </section>
@@ -500,6 +515,7 @@ export default function App() {
               </div>
             ) : (
               <>
+                <ContactSearchName key={selected.contact.id} contact={selected.contact} onRefresh={refresh} />
                 <header className="conversation-header">
                   <button
                     className="mobile-back icon-button"
@@ -662,7 +678,7 @@ export default function App() {
                   <p>
                     <i />
                     {selected.contact.platform === "line" ? "LINE" : "Slack"}
-                    {isMock ? " のデモ会話に追加されます" : " に送信されます"}
+                     に送信されます
                     <span>改行は Enter</span>
                   </p>
                 </form>
@@ -671,6 +687,7 @@ export default function App() {
           </section>
         </div>
       </main>
+      <ReminderAlerts items={items} now={now} onOpen={open} />
       {notice && (
         <div className="toast" role="status">
           <Check size={16} />
