@@ -8,7 +8,7 @@ import { createTabsRouter } from './routes/tabs.js';
 import express from 'express';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createJsonStore } from './repositories/jsonStore.js';
+import { createSplitStore } from './repositories/splitStore.js';
 import { createContactRepository } from './repositories/contactRepository.js';
 import { createMessageRepository } from './repositories/messageRepository.js';
 import { createContactService } from './services/contactService.js';
@@ -67,7 +67,7 @@ export function createApp(store, { providers = { line: createLineClient() } } = 
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const store = await createJsonStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
+    const store = await createSplitStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
     const slack = createSlackReceiver(createMessageService(createMessageRepository(store)));
     let closing = false;
     let listening = 0;
