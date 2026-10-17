@@ -2,6 +2,7 @@ import { request } from "./http.js";
 const write = (path, method, body) =>
   request(path, { method, body: JSON.stringify(body) });
 export const api = {
+  reorderTabs: (tabIds, expectedOrder) => write('/tabs/reorder', 'POST', { tabIds, expectedOrder }),
   replyImage: (conversationId, file) => request(`/messages/reply-image?conversationId=${encodeURIComponent(conversationId)}`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file }),
   searchName: (id, searchName) => write(`/contacts/${encodeURIComponent(id)}/search-name`, 'PATCH', { searchName }),
   moveTab: (id, direction) => write(`/tabs/${encodeURIComponent(id)}/move`, 'POST', { direction }),

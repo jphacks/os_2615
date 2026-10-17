@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { matchesContact } from '../services/contactSearch.js';
 import { api } from '../services/api.js';
-export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, creating, onCloseCreate }) {
+export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, creating, onCloseCreate, showOrderControls = true }) {
   const [expanded, setExpanded] = useState(false);
   const nameInput = useRef(null);
   const [name, setName] = useState('');
@@ -37,14 +37,18 @@ export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, c
         <button type="button" disabled={busy} onClick={onCloseCreate}>キャンセル</button>
       </form>}
       {selected && <>
-        <div className="tab-order-controls" role="group" aria-label="タブの並び順">
-          <span>並び順</span>
+        {showOrderControls && <div className="tab-order-controls" role="group" aria-label="タブの並び順">
+          <div className="tab-order-heading">
+            <span>並び順</span>
+            <small aria-live="polite">{tabs.findIndex(tab => tab.id === selected.id) + 1} / {tabs.length}</small>
+          </div>
+          <div className="tab-order-buttons">
           <button type="button" disabled={busy || tabs[0]?.id === selected.id} onClick={() => run(() => api.moveTab(selected.id, 'first'))}>一番前へ</button>
           <button type="button" disabled={busy || tabs[0]?.id === selected.id} onClick={() => run(() => api.moveTab(selected.id, 'previous'))}>← 前へ</button>
           <button type="button" disabled={busy || tabs[tabs.length - 1]?.id === selected.id} onClick={() => run(() => api.moveTab(selected.id, 'next'))}>後へ →</button>
           <button type="button" disabled={busy || tabs[tabs.length - 1]?.id === selected.id} onClick={() => run(() => api.moveTab(selected.id, 'last'))}>一番後ろへ</button>
-          <small aria-live="polite">{tabs.findIndex(tab => tab.id === selected.id) + 1} / {tabs.length}</small>
-        </div>
+          </div>
+        </div>}
         <div className="tab-member-scroll" role="region" aria-label="タブに登録する相手" tabIndex={0}>
         <p>このタブに表示する相手を選んでください。複数のタブに登録できます。</p>
         <label>相手を検索<input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前で検索" /></label>

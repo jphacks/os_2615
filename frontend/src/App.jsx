@@ -18,8 +18,10 @@ import { api } from "./services/api";
 import { matchesContact } from "./services/contactSearch.js";
 import ContactSearchName from "./components/ContactSearchName.jsx";
 import ImageReply, { MessageImage } from "./components/ImageReply.jsx";
+import { readSettings } from "./services/settings.js";
 import Settings from "./components/Settings.jsx";
 import InstallApp from "./components/InstallApp.jsx";
+import DraggableTabs from "./components/DraggableTabs.jsx";
 import CustomTabs from "./components/CustomTabs.jsx";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
 import ReminderAlerts from "./components/ReminderAlerts.jsx";
@@ -63,6 +65,7 @@ function Avatar({ contact: c }) {
   );
 }
 export default function App() {
+  const [tabMoveMethod, setTabMoveMethod] = useState(() => { try { return readSettings(window.localStorage).tabMoveMethod; } catch { return 'both'; } });
   const [tabs, setTabs] = useState([]);
   const [creatingTab, setCreatingTab] = useState(false);
   const filters = [...baseFilters, ...tabs.map(tab => [`tab:${tab.id}`, tab.name, Inbox])];
@@ -93,6 +96,18 @@ export default function App() {
     modal = useRef(null),
     restoreFocus = useRef(null);
   const selected = detail?.contact.id === active ? detail : null;
+  async function reorderTabs(tabIds, expectedOrder) {
+    setError('');
+    try {
+      const result = await api.reorderTabs(tabIds, expectedOrder);
+      ++listVersion.current;
+      setTabs(result.data);
+      setNotice('タブの並び順を保存しました');
+    } catch (error) {
+      await loadList();
+      throw error;
+    }
+  }
   async function loadList() {
     const v = ++listVersion.current;
     try {
@@ -289,22 +304,14 @@ export default function App() {
             <img src="/konekuto-icon.svg" alt="" width="44" height="44" />
           </span>
           <b>
-            こねくと<i>.</i>
+            <span>こね</span><span>くと</span>
           </b>
         </a>
         <nav aria-label="受信箱フィルタ">
-          {[baseFilters, filters.slice(baseFilters.length)].map((group, index) => (group.length > 0 || index === 1) && (
-            <div className="sidebar-tab-group" role="group" aria-label={index === 0 ? "標準フィルタ" : "ユーザー作成タブ"} key={index}>
-              {group.map(([f, label, Icon]) => (
-                <button key={f} className={`nav-item ${filter === f ? "chosen" : ""}`} onClick={() => setFilter(f)}>
-                  <Icon size={18} />
-                  <span>{label}</span>
-                  <small>{counts[f]}</small>
-                </button>
-              ))}
-              {index === 1 && <button className="nav-item add-tab-button" onClick={() => setCreatingTab(true)}>＋ タブを追加</button>}
-            </div>
-          ))}
+          <div className="sidebar-tab-group" role="group" aria-label="標準フィルタ">
+            {baseFilters.map(([f, label, Icon]) => <button key={f} className={`nav-item ${filter === f ? "chosen" : ""}`} onClick={() => setFilter(f)}><Icon size={18} /><span>{label}</span><small>{counts[f]}</small></button>)}
+          </div>
+          <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} vertical onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
         </nav>
         <div className="sidebar-bottom">
           <p>つながっているサービス</p>
@@ -321,6 +328,15 @@ export default function App() {
           <small>
             外部サービスの接続状態は未確認
           </small>
+          <p className="planned-services-title">今後の接続予定</p>
+          <div className="connection planned-connection">
+            <span className="planned-service-mark" aria-hidden="true">T</span>
+            <span>Microsoft Teams<small>未接続・対応予定</small></span>
+          </div>
+          <div className="connection planned-connection">
+            <span className="planned-service-mark" aria-hidden="true">IG</span>
+            <span>Instagram<small>未接続・対応予定</small></span>
+          </div>
           <div className="profile">
             <span>K</span>
             <div>
@@ -332,7 +348,7 @@ export default function App() {
       <main>
         <InstallApp />
         <section className="heading">
-          <Settings />
+          <Settings onTabMoveMethodChange={setTabMoveMethod} />
           <div className="date">
             {new Date(now).toLocaleDateString("ja-JP", {
               month: "long",
@@ -392,18 +408,12 @@ export default function App() {
               )}
             </label>
             <div className="mobile-tabs">
-              {[baseFilters, filters.slice(baseFilters.length)].map((group, index) => (group.length > 0 || index === 1) && (
-                <div className="tab-group" role="group" aria-label={index === 0 ? "標準フィルタ" : "ユーザー作成タブ"} key={index}>
-                  {group.map(([f, label]) => (
-                    <button key={f} className={filter === f ? "chosen" : ""} onClick={() => setFilter(f)}>
-                      {label}
-                    </button>
-                  ))}
-                  {index === 1 && <button className="add-tab-button" onClick={() => setCreatingTab(true)}>＋ タブを追加</button>}
-                </div>
-              ))}
+              <div className="tab-group" role="group" aria-label="標準フィルタ">
+                {baseFilters.map(([f, label]) => <button key={f} className={filter === f ? "chosen" : ""} onClick={() => setFilter(f)}>{label}</button>)}
+              </div>
+              <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
             </div>
-            <CustomTabs creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
+            <CustomTabs showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
@@ -430,7 +440,7 @@ export default function App() {
                     reminder: r,
                   }) => (
                     <button
-                      className={`contact-card ${active === c.id ? "active" : ""}`}
+                      className={`contact-card ${active === c.id ? "active" : ""} ${r?.status === "pending" && Date.parse(r.remindAt) <= now ? "reminder-due" : ""}`}
                       key={c.id}
                       onClick={() => open(c.id)}
                     >

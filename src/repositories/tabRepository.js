@@ -1,6 +1,6 @@
 /* カスタムタブとContactの所属を直列化した保存処理で管理する。 */
 import { randomUUID } from 'node:crypto';
-import { notFound } from '../utils/errors.js';
+import { AppError, notFound } from '../utils/errors.js';
 export function createTabRepository(store) {
   return {
     list: () => store.read().tabs ?? [],
@@ -8,6 +8,16 @@ export function createTabRepository(store) {
       const tab = { id: randomUUID(), name, contactIds: [] };
       (state.tabs ??= []).push(tab);
       return tab;
+    }); },
+    reorder(tabIds, expectedOrder) { return store.update(state => {
+      const tabs = state.tabs ?? [];
+      if (tabs.length !== tabIds.length || tabs.some(tab => !tabIds.includes(tab.id)) ||
+          tabs.some((tab, index) => tab.id !== expectedOrder[index])) {
+        throw new AppError(409, 'TAB_ORDER_CHANGED', 'タブが別の画面で変更されました。再取得してから並び替えてください。');
+      }
+      const byId = new Map(tabs.map(tab => [tab.id, tab]));
+      state.tabs = tabIds.map(id => byId.get(id));
+      return state.tabs;
     }); },
     move(id, direction) { return store.update(state => {
       const tabs = state.tabs ?? [];

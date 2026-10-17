@@ -89,3 +89,18 @@ test('先頭・末尾への移動は他のタブの相対順と所属を保持�
  assert.deepEqual(store.read().tabs[0].contactIds,['demo-contact-line']);
  assert.deepEqual((await createJsonStore(path)).read(),store.read());
 });
+test('ドラッグ順を一括保存し、所属を保持して古い順番での更新を拒否する', async t => {
+ const {call,store,path}=await setup(t);const ids=[];
+ for(const name of ['A','B','C'])ids.push((await call('','POST',{name})).body.data.id);
+ await call(`/${ids[1]}/contacts/demo-contact-line`,'PUT',{});
+ const r=await call('/reorder','POST',{tabIds:[ids[2],ids[0],ids[1]],expectedOrder:ids});
+ assert.equal(r.status,200);assert.deepEqual(r.body.data.map(tab=>tab.id),[ids[2],ids[0],ids[1]]);
+ assert.deepEqual(store.read().tabs[2].contactIds,['demo-contact-line']);
+ assert.deepEqual((await createJsonStore(path)).read(),store.read());
+ assert.equal((await call('/reorder','POST',{tabIds:ids,expectedOrder:ids})).status,409);
+ for(const body of [{tabIds:[ids[0],ids[0]],expectedOrder:[ids[1],ids[2]]},{tabIds:ids},null])assert.equal((await call('/reorder','POST',body)).status,400);
+ const before=store.read();
+ await call('','POST',{name:'new'});
+ assert.equal((await call('/reorder','POST',{tabIds:ids,expectedOrder:before.tabs.map(tab=>tab.id)})).status,409);
+ assert.equal(store.read().tabs.length,4);
+});
