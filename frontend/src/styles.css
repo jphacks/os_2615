@@ -94,7 +94,7 @@ textarea:focus {
   gap: 12px;
   border-radius: 8px;
   margin-bottom: 7px;
-  color: #919191;
+  color: var(--tab-ink, #4b4b4b);
   font-size: calc(12px * var(--font-scale, 1));
 }
 .nav-item small {
@@ -1026,11 +1026,11 @@ h1 span {
     padding: 6px 11px;
     border-radius: 5px;
     font-size: calc(10px * var(--font-scale, 1));
-    color: #a4a4a4;
+    color: var(--tab-ink, #4b4b4b);
   }
   .mobile-tabs .chosen {
     background: #f0f0f0;
-    color: #7c7c7c;
+    color: var(--ink, #202020);
   }
   .contact-card {
     padding: 18px 20px;
@@ -1241,6 +1241,7 @@ h1 span {
 :root {
   --ink: #202020;
   --muted-ink: #737373;
+  --tab-ink: #4b4b4b;
   --surface: #ffffff;
   --canvas: #f7f7f7;
   --selected-surface: #eeeeee;
@@ -1666,6 +1667,7 @@ h1 span {
   color-scheme: dark;
   --ink: #eeeeee;
   --muted-ink: #b4b4b4;
+  --tab-ink: #d0d0d0;
   --surface: #202124;
   --canvas: #141517;
   --selected-surface: #35373b;
