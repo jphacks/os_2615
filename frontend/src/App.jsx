@@ -304,11 +304,6 @@ export default function App() {
       </aside>
       <main>
         <section className="heading">
-          <div>
-            <h1>
-              Inbox <span>受信トレイ</span>
-            </h1>
-          </div>
           <div className="date">
             {new Date(now).toLocaleDateString("ja-JP", {
               month: "long",
