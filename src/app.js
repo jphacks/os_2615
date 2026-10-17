@@ -16,6 +16,11 @@ import { logEvent } from './utils/logger.js';
 import { createLineWebhookRouter } from './providers/line/lineWebhook.js';
 import { createLineClient } from './providers/line/lineClient.js';
 import { createSlackReceiver } from './providers/slack/slackEvents.js';
+import { createReplyService } from './services/replyService.js';
+import { createMessagesRouter } from './routes/messages.js';
+import { createReminderRepository } from './repositories/reminderRepository.js';
+import { createReminderService } from './services/reminderService.js';
+import { createRemindersRouter } from './routes/reminders.js';
 
 function errorHandler(error, _req, res, _next) {
   let safe = error instanceof AppError ? error : new AppError(500, 'INTERNAL_ERROR', '処理に失敗しました。');
@@ -39,12 +44,14 @@ export function createWebhookApp(store, options = {}) {
   return app;
 }
 
-export function createApp(store) {
+export function createApp(store, { providers = { line: createLineClient() } } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.use('/api', express.json({ limit: '64kb' }));
   app.get('/api/health', (_req, res) => res.json({ data: { status: 'ok' } }));
+  app.use('/api/reminders', createRemindersRouter(createReminderService(createReminderRepository(store))));
+  app.use('/api/messages', createMessagesRouter(createReplyService(createMessageRepository(store), providers)));
   app.use('/api/contacts', createContactsRouter(
     createContactService(createContactRepository(store)),
     createMessageService(createMessageRepository(store))
@@ -66,7 +73,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         void slack.start();
       }
     };
-    const servers = [createApp(store).listen(3000, '127.0.0.1', onListening),
+    const servers = [createApp(store, { providers: { line: createLineClient(), slack } }).listen(3000, '127.0.0.1', onListening),
       createWebhookApp(store).listen(3001, '127.0.0.1', onListening)];
     const close = () => {
       if (closing) return;

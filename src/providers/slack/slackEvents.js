@@ -5,6 +5,7 @@ import { App, LogLevel } from '@slack/bolt';
 import { logEvent } from '../../utils/logger.js';
 import { createSlackClient } from './slackClient.js';
 import { mapSlackEvent } from './slackMapper.js';
+import { AppError } from '../../utils/errors.js';
 
 // SDKから渡される引数は意図的に捨てる。ログレベル変更でも秘密情報を出力しない。
 export const slackLogger = {
@@ -41,8 +42,16 @@ export function createSlackReceiver(messages, {
   let app;
   let stopped = false;
   let started = false;
+  let replyClient;
   const pending = new Set();
   return {
+    async sendText(input) {
+      if (!botToken?.trim() || !appToken?.trim()) {
+        throw new AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Slackの認証情報が未設定です。');
+      }
+      if (!replyClient || stopped) throw new AppError(502, 'PROVIDER_ERROR', 'Slack接続の準備ができていません。');
+      return replyClient.sendText(input);
+    },
     async start() {
       if (stopped || started) return false;
       started = true;
@@ -71,9 +80,11 @@ export function createSlackReceiver(messages, {
         });
         await app.start();
         if (stopped) { await app.stop(); return false; }
+        replyClient = client;
         logEvent('SLACK_CONNECTED');
         return true;
       } catch {
+        replyClient = undefined;
         logEvent('SLACK_START_FAILED');
         if (app) await app.stop().catch(() => {});
         return false;
@@ -82,6 +93,7 @@ export function createSlackReceiver(messages, {
     async stop() {
       if (stopped) return;
       stopped = true;
+      replyClient = undefined;
       if (app) {
         try { await app.stop(); } catch { logEvent('SLACK_ERROR'); }
       }
