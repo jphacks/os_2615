@@ -56,6 +56,7 @@ curl http://127.0.0.1:3000/api/contacts/demo-contact-slack/messages
 - POST /api/messages/replyによるLINE Push・Slack DMへのテキスト返信。
 - Provider送信成功後の送信履歴保存・未返信解除・設定済みReminder完了。
 - 同じ会話への並行送信の拒否、送信中の新着・Reminder再設定の保護。
+- PATCH /api/contacts/:id/favoriteによるお気に入り登録・解除、保存と再起動後の保持。
 
 ## LINE実機確認
 
@@ -169,9 +170,31 @@ Frontend担当は既存のAPIクライアントのまま利用可能。実API接
 外部送信の仕様は[LINE公式リファレンス](https://developers.line.biz/en/reference/messaging-api/#send-push-message)と
 [Slack chat.postMessage公式リファレンス](https://docs.slack.dev/reference/methods/chat.postMessage/)を参照。
 
+## お気に入りの確認
+
+1. サーバーを再起動する。
+2. GET /api/contactsで操作対象のContact.idを控える。Conversation.idとは異なる。
+3. 以下の人物IDを置き換えて登録する。
+
+```sh
+curl -X PATCH http://127.0.0.1:3000/api/contacts/実際の人物ID/favorite \
+  -H 'Content-Type: application/json' \
+  -d '{"isFavorite":true}'
+curl 'http://127.0.0.1:3000/api/contacts?filter=favorite'
+```
+
+4. 成功200とdata.isFavorite: true、お気に入り一覧への表示、通常Inboxの上部表示を確認する。
+5. サーバー再起動後も同じ状態であることを確認する。
+6. 解除時は同じPATCHへisFavorite: falseを送り、お気に入り一覧から外れることを確認する。
+
+実APIモードのFrontendでは既存の星ボタンで同じ操作ができる。Frontendファイルは変更していない。
+指定したbooleanを保存するため、同じ値の再送で状態が反転することはない。
+メッセージ・未返信状態・Reminder・lastMessageAtは変更しない。
+未知の人物は404、不正な本文やクエリは400、保存失敗は500 STORAGE_ERRORとなり、既存状態を維持する。
+
 ## 次の段階
 
-お気に入りとReminderの更新APIは未実装。
+Reminderの取得・設定・取消APIは未実装。
 未実装のHTTP APIは404を返す。
 自動テストは署名付きHTTPリクエスト、Boltイベント処理経路、外部APIのStubで検証している。
 LINEの実機テキスト・スタンプ受信とSlack DM受信は確認済み。実機での返信は上記手順で別途確認する。
