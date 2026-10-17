@@ -103,6 +103,15 @@ LINE公式アカウントとSlack BotのDMを同じ画面で確認・返信で�
 * **会話単位の状態管理と柔軟な分類：** 未返信・リマインダー・お気に入り・任意タブを組み合わせ、サービスをまたいだ連絡先の整理を実装しました。[Message Repository](src/repositories/messageRepository.js) / [タブ保存処理](src/repositories/tabRepository.js) / [名前検索](frontend/src/services/contactSearch.js)
 * **相手別ファイルと管理ファイルを使う保存処理：** 変更した履歴を先に保存し、管理ファイルの置換で更新を確定します。旧形式のバックアップ・移行、ファイル欠損や保存失敗の検証も実装しました。[分割保存処理](src/repositories/splitStore.js) / [保存処理のテスト](tests/splitStore.test.js) / [保存形式・復旧手順](docs/storage.md)
 
+### 外部サービスの認証情報について
+
+セキュリティ上の理由から、LINE・Slackの認証情報とデモで使用する実データはリポジトリに含めていません。Hack Dayのデモ環境では、Backendの `.env` に認証情報を設定しています。
+
+- **認証情報なし：** 画面・APIの起動と自動テストを確認できます。初期データは空です。
+- **実際の送受信：** ご自身のLINE公式アカウント・Slackアプリの認証情報と接続設定が必要です。
+
+設定項目は [`.env.example`](.env.example)、接続方法は[デモ手順](docs/demo.md)を参照してください。
+
 <details>
 <summary>ローカルでの起動・デモ確認</summary>
 
