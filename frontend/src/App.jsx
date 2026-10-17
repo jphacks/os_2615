@@ -314,11 +314,9 @@ export default function App() {
         </header>
         <section className="heading">
           <div>
-            <div className="eyebrow">ALL YOUR CONVERSATIONS, TOGETHER.</div>
             <h1>
               Inbox <span>受信トレイ</span>
             </h1>
-            <p>人と、会話を、ひとつに。大切な返信を見逃さない。</p>
           </div>
           <div className="date">
             {new Date(now).toLocaleDateString("ja-JP", {
