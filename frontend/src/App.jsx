@@ -15,6 +15,8 @@ import {
   Bell,
 } from "lucide-react";
 import { api, isMock } from "./services/api";
+import ReminderCalendar from "./components/ReminderCalendar.jsx";
+import { localDateTime } from "./components/reminderDate.js";
 const filters = [
   ["all", "すべて", Inbox],
   ["unreplied", "未返信", MessageCircle],
@@ -140,7 +142,7 @@ export default function App() {
   useEffect(() => {
     if (!target) return;
     restoreFocus.current = document.activeElement;
-    modal.current?.querySelector("input")?.focus();
+    modal.current?.querySelector("[data-initial-focus]")?.focus();
     return () => restoreFocus.current?.focus();
   }, [target]);
   async function action(fn, message) {
@@ -191,7 +193,7 @@ export default function App() {
       messageId: m.id,
       name: selected.contact.displayName,
     });
-    setWhen("");
+    setWhen(localDateTime(new Date(Date.now() + 30 * 60000)));
     setModalError("");
   }
   async function saveReminder(e) {
@@ -227,7 +229,7 @@ export default function App() {
     if (e.key === "Tab") {
       const controls = [
           ...modal.current.querySelectorAll(
-            "button:not(:disabled),input:not(:disabled)",
+            "button:not(:disabled),input:not(:disabled),select:not(:disabled)",
           ),
         ],
         first = controls[0],
@@ -704,16 +706,11 @@ export default function App() {
             <h2 id="reminder-title">ちょうどいい時間に、返信を。</h2>
             <p>{target.name}さんへの返信を、あとで思い出せるように。</p>
             <form onSubmit={saveReminder}>
-              <label className="datetime-label">
-                返信する日時
-                <input
-                  type="datetime-local"
-                  aria-label="返信する日時"
-                  required
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
-              </label>
+              <ReminderCalendar
+                value={when}
+                onChange={setWhen}
+                disabled={busy}
+              />
               <div className="quick-times">
                 {[
                   [30, "30分後"],
@@ -723,18 +720,27 @@ export default function App() {
                   <button
                     key={mins}
                     type="button"
+                    disabled={busy}
                     onClick={() => {
                       const d = new Date(Date.now() + mins * 60000);
-                      setWhen(
-                        new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-                          .toISOString()
-                          .slice(0, 16),
-                      );
+                      setWhen(localDateTime(d));
                     }}
                   >
                     {label}
                   </button>
                 ))}
+              </div>
+              <div className="reminder-selection" aria-live="polite">
+                <span>選択中の日時</span>
+                <strong>
+                  {new Date(when).toLocaleString("ja-JP", {
+                    month: "long",
+                    day: "numeric",
+                    weekday: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </strong>
               </div>
               <p className="modal-note">
                 設定時刻になると、アプリ内で目立つ表示になります。
@@ -748,7 +754,7 @@ export default function App() {
                 className="send-button modal-submit"
                 disabled={busy || !when}
               >
-                {busy ? "設定中…" : "後で返信を設定"}
+                {busy ? "設定中…" : "この日時で確定"}
                 <Check size={15} />
               </button>
             </form>
