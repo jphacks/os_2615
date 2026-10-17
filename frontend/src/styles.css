@@ -179,7 +179,7 @@ main {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 32px 0 25px;
+  padding: 14px 0;
 }
 h1 {
   font-size: 34px;
@@ -244,7 +244,7 @@ h1 span {
 .inbox-layout {
   display: grid;
   grid-template-columns: 345px minmax(0, 1fr);
-  height: calc(100dvh - 170px);
+  height: calc(100dvh - 120px);
   min-height: 480px;
   background: white;
   border: 1px solid #e1e7e3;
@@ -997,7 +997,7 @@ h1 span {
     padding: 0 15px;
   }
   .heading {
-    padding: 23px 0 20px;
+    padding: 14px 0;
   }
   h1 {
     font-size: 29px;
@@ -1013,7 +1013,7 @@ h1 span {
   }
   .inbox-layout {
     display: block;
-    height: calc(100dvh - 165px);
+    height: calc(100dvh - 115px);
     min-height: 420px;
   }
   .inbox-panel {
