@@ -1676,7 +1676,7 @@ h1 span {
   background: var(--canvas);
 }
 [data-theme="dark"] .shell * { border-color: var(--line); }
-[data-theme="dark"] :is(.sidebar, .inbox-layout, .conversation-header, .composer, .bubble, .modal, .welcome-icon > span) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.sidebar, .inbox-layout, .conversation-panel, .conversation-header, .composer, .bubble, .modal, .welcome-icon > span) { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] :is(input, textarea)::placeholder { color: var(--muted-ink); }
 [data-theme="dark"] :is(.mine .bubble, .unreplied, .reminder-banner, .reminder-selection, .avatar, .welcome-icon, .modal-icon, .due-callout, .error) { background: var(--selected-surface); color: var(--ink); }
@@ -1749,3 +1749,72 @@ h1 span {
 
 .complete-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 10px; border: 1px solid currentColor; border-radius: 8px; font-size: calc(11px * var(--font-scale, 1)); flex-shrink: 0; }
 @media (max-width: 650px) { .conversation-header { flex-wrap: wrap; } .complete-button { white-space: nowrap; } }
+
+/* 予約送信は未送信の予定として履歴と分けて表示する。 */
+.scheduled-messages { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.schedule-trigger { display: inline-flex; align-items: center; gap: 5px; border: 1px solid currentColor; border-radius: 7px; padding: 7px 10px; }
+.scheduled-messages > small { color: var(--muted-ink, #777); font-size: calc(10px * var(--font-scale, 1)); }
+.scheduled-message { flex: 1 1 100%; min-width: 0; border: 1px solid #ccc; border-radius: 8px; padding: 10px; font-size: calc(11px * var(--font-scale, 1)); }
+.scheduled-message time { margin-left: 8px; }
+.scheduled-message p { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 100px; overflow-y: auto; margin: 6px 0; }
+.scheduled-message small { display: block; }
+.scheduled-message button { text-decoration: underline; margin-top: 6px; }
+.schedule-unknown, .schedule-failed, .schedule-missed { border-color: #d77; }
+.scheduled-dialog { border: 1px solid #ddd; max-height: 90dvh; overflow-y: auto; margin: auto; }
+.scheduled-dialog::backdrop { background: #0006; }
+.scheduled-dialog textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin: 8px 0 16px; border: 1px solid #bbb; border-radius: 8px; background: transparent; color: inherit; resize: vertical; }
+[data-theme="dark"] .scheduled-dialog { background: var(--surface); color: var(--ink); }
+
+.scheduled-list { flex: 1 1 100%; max-height: 180px; overflow-y: auto; display: grid; gap: 8px; }
+.scheduled-list:empty { display: none; }
+
+.message-image-actions { min-width: 0; }
+.image-download { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: calc(11px * var(--font-scale, 1)); text-decoration: underline; }
+
+/* ヘッダー操作をパネル内へ集約し、チャットに画面の高さを使う。 */
+main { display: flex; flex-direction: column; height: 100dvh; box-sizing: border-box; padding-top: 12px; padding-bottom: 12px; gap: 8px; }
+main > .install-app, main > .error { flex-shrink: 0; }
+.inbox-layout { flex: 1; min-height: 0; height: auto; }
+.list-heading { justify-content: flex-start; gap: 10px; flex-shrink: 0; }
+.list-heading h2 { min-width: 0; overflow-wrap: anywhere; }
+.list-heading .list-refresh { margin-left: 0; flex-shrink: 0; }
+.list-heading .header-settings { margin-left: auto; }
+.header-settings { width: 36px; height: 36px; flex-shrink: 0; padding: 8px; color: inherit; }
+.conversation-header > .header-settings { margin-left: 0; }
+.conversation-header { flex-shrink: 0; }
+.composer { flex-shrink: 0; max-height: 55%; overflow-y: auto; }
+.scheduled-list { max-height: min(120px, 15dvh); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; grid-auto-rows: max-content; }
+.scheduled-message p { max-height: 60px; }
+@media (max-width: 650px) {
+ main { padding-top: 8px; padding-bottom: 8px; }
+ .inbox-layout { height: auto; min-height: 0; }
+ .conversation-header { gap: 6px; }
+ .composer { padding: 8px 12px; }
+ .scheduled-messages { margin-top: 6px; }
+ .image-reply { padding: 4px 0; }
+}
+
+/* リマインダーは相手の操作へ、画像選択は入力欄の左下へ。 */
+.header-later { margin-left: auto; white-space: nowrap; flex-shrink: 0; padding: 7px 4px; font-size: calc(11px * var(--font-scale, 1)); }
+.conversation-header .favorite-button { margin-left: 0; flex-shrink: 0; }
+.conversation-person { min-width: 0; }
+.conversation-person h2 { overflow-wrap: anywhere; }
+.composer-actions { flex-wrap: wrap; gap: 8px; }
+.composer-actions > .image-reply { display: block; flex: 1 1 170px; min-width: 0; border-top: 0; padding: 0; }
+.composer-actions > .composer-send-actions { margin-left: auto; }
+.image-reply .image-picker-toolbar { flex-wrap: nowrap; gap: 4px; }
+.image-picker-hint { white-space: nowrap; }
+@media (max-width: 650px) {
+ .header-later { font-size: calc(10px * var(--font-scale, 1)); gap: 3px; }
+ .composer-actions > .image-reply { flex-basis: 165px; }
+ .composer-actions .image-picker-button { width: 32px; height: 36px; }
+ .composer-actions .image-picker-hint { font-size: calc(11px * var(--font-scale, 1)); }
+}
+
+.platform-filter { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 20px 12px; flex-shrink: 0; font-size: calc(11px * var(--font-scale, 1)); color: var(--muted-ink); }
+ .platform-picker { position: relative; min-width: 112px; }
+.platform-trigger { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; padding: 7px 10px; border: 1px solid var(--line, #ddd); border-radius: 12px; background: var(--surface, #fff); color: var(--ink, #222); font: inherit; cursor: pointer; }
+.platform-options { position: absolute; top: calc(100% + 6px); right: 0; min-width: 100%; padding: 5px; border: 1px solid var(--line, #ddd); border-radius: 12px; background: var(--surface, #fff); color: var(--ink, #222); box-shadow: 0 6px 18px #0002; z-index: 20; }
+.platform-options button { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.platform-options button:hover, .platform-options button:focus-visible, .platform-options button[aria-checked="true"] { background: var(--selected-surface, #eee); }
+.platform-trigger:focus-visible, .platform-options button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

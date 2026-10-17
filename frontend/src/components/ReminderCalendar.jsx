@@ -5,6 +5,7 @@ export default function ReminderCalendar({
   value,
   onChange,
   disabled = false,
+  maxDateTime,
 }) {
   const selectedDate = value.slice(0, 10);
   const [month, setMonth] = useState(
@@ -15,6 +16,8 @@ export default function ReminderCalendar({
       new Date(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, 1),
     );
   }, [value.slice(0, 7)]);
+  const lastDay = maxDateTime?.slice(0, 10);
+  const canGoForward = !lastDay || `${month.getFullYear()}-${String(month.getMonth()+1).padStart(2,'0')}` < lastDay.slice(0,7);
   const today = localDateTime(new Date()).slice(0, 10);
   const cells = monthDays(month.getFullYear(), month.getMonth());
   const move = (offset) =>
@@ -49,6 +52,7 @@ export default function ReminderCalendar({
             type="button"
             className="icon-button"
             aria-label="次の月"
+            disabled={!canGoForward}
             onClick={() => move(1)}
           >
             <ChevronRight size={18} />
@@ -66,7 +70,7 @@ export default function ReminderCalendar({
             <button
               type="button"
               key={day}
-              disabled={day < today}
+              disabled={day < today || Boolean(lastDay && day > lastDay)}
               className={day === selectedDate ? "selected-day" : ""}
               aria-label={`${Number(day.slice(0, 4))}年${Number(day.slice(5, 7))}月${Number(day.slice(8))}日`}
               aria-pressed={day === selectedDate}

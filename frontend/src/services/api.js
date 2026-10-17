@@ -2,6 +2,9 @@ import { request } from "./http.js";
 const write = (path, method, body) =>
   request(path, { method, body: JSON.stringify(body) });
 export const api = {
+  scheduledMessages: (conversationId) => request(`/scheduled-messages?conversationId=${encodeURIComponent(conversationId)}`),
+  scheduleMessage: (body) => write('/scheduled-messages', 'POST', body),
+  cancelScheduledMessage: (id) => write(`/scheduled-messages/${encodeURIComponent(id)}`, 'DELETE', {}),
   complete: (id, lastMessageId) => write(`/contacts/${encodeURIComponent(id)}/complete`, 'POST', { lastMessageId }),
   reorderTabs: (tabIds, expectedOrder) => write('/tabs/reorder', 'POST', { tabIds, expectedOrder }),
   replyImage: (conversationId, file) => request(`/messages/reply-image?conversationId=${encodeURIComponent(conversationId)}`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file }),

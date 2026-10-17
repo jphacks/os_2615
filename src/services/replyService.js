@@ -7,9 +7,10 @@ export function createReplyService(repository, providers, { mediaRepository, pub
   const pending = new Set();
   return {
     async reply(input) { return send(input, false); },
+    async replyScheduled(job) { return send({ conversationId: job.conversationId, text: job.text }, false, job.id); },
     async replyImage(conversationId, bytes) { return send({ conversationId, bytes }, true); }
   };
-  async function send(input, image) {
+  async function send(input, image, scheduledId) {
       if (!input || typeof input !== 'object' || Array.isArray(input) ||
           Object.keys(input).length !== 2 || Object.keys(input).some(key => !(image ? ['conversationId', 'bytes'] : ['conversationId', 'text']).includes(key)) ||
           typeof input.conversationId !== 'string' || !input.conversationId.trim() ||
@@ -31,7 +32,7 @@ export function createReplyService(repository, providers, { mediaRepository, pub
             if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error();
             baseUrl = url.origin;
           } catch { throw new AppError(503, 'PUBLIC_URL_REQUIRED', '画像送信用のHTTPS公開URLが未設定です。'); }
-          media = await mediaRepository.save(input.bytes, 1024 * 1024);
+          media = await mediaRepository.save(input.bytes, context.conversation.platform, 1024 * 1024);
         }
         let draft;
         try { draft = image
@@ -44,7 +45,7 @@ export function createReplyService(repository, providers, { mediaRepository, pub
         // ここからの失敗は外部送信済みの可能性がある。再送を促す一般保存エラーにはしない。
         try {
           if (draft?.text !== text || (image && (draft.messageType !== 'image' || draft.media?.id !== media.id))) throw new Error('Unexpected message text');
-          return await repository.saveReply(context, draft);
+          return await repository.saveReply(context, draft, scheduledId);
         } catch { throw deliveryUnknown(500); }
       } finally { pending.delete(conversationId); }
     }

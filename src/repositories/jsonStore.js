@@ -14,6 +14,12 @@ function validateState(state) {
         Array.isArray(state[key]) && state[key].every(row => row && typeof row.id === 'string'))) {
     throw storageError();
   }
+  if (state.scheduledMessages !== undefined && (!Array.isArray(state.scheduledMessages) ||
+      new Set(state.scheduledMessages.map(job => job?.id)).size !== state.scheduledMessages.length ||
+      state.scheduledMessages.some(job => !job || typeof job.id !== 'string' || !job.id ||
+        !state.conversations.some(row => row.id === job.conversationId) || typeof job.text !== 'string' ||
+        !job.text.trim() || job.text.length > 5000 || !Number.isFinite(Date.parse(job.sendAt)) ||
+        !Number.isFinite(Date.parse(job.createdAt)) || !['pending','sending','sent','failed','unknown','missed','cancelled'].includes(job.status)))) throw storageError();
   for (const key of ['contacts', 'conversations', 'messages', 'reminders']) {
     if (new Set(state[key].map(row => row.id)).size !== state[key].length) throw storageError();
   }

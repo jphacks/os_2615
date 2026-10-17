@@ -3,6 +3,14 @@ import { Router } from 'express';
 import { invalidInput } from '../utils/errors.js';
 export function createMediaRouter(repository) {
   const router=Router();
+  router.get('/:id/download',async(req,res)=>{
+    if(Object.keys(req.query).length)throw invalidInput();
+    const media=await repository.read(req.params.id);
+    res.set('X-Content-Type-Options','nosniff');
+    res.set('Cache-Control','no-store');
+    res.attachment(`konekuto-${req.params.id}`);
+    res.type(media.mimeType).send(media.bytes);
+  });
   router.get('/:id',async(req,res)=>{
     if(Object.keys(req.query).length)throw invalidInput();
     const media=await repository.read(req.params.id);

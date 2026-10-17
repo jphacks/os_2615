@@ -2,11 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Settings as SettingsIcon, X } from 'lucide-react';
 import { SETTINGS_KEY, applySettings, defaultSettings, readSettings, writeSettings } from '../services/settings.js';
-export default function Settings({ onTabMoveMethodChange }) {
+export default function Settings({ onTabMoveMethodChange, openRequest, hideTrigger = false }) {
   const dialog = useRef(null);
   const [settings, setSettings] = useState(() => {
     try { return readSettings(window.localStorage); } catch { return { ...defaultSettings }; }
   });
+  useEffect(() => { if (openRequest) dialog.current?.showModal(); }, [openRequest]);
   const [saved, setSaved] = useState(true);
   useEffect(() => {
     applySettings(settings);
@@ -27,7 +28,7 @@ export default function Settings({ onTabMoveMethodChange }) {
     return () => window.removeEventListener('storage', changed);
   }, []);
   return <>
-    <button type="button" className="settings-trigger" aria-label="表示設定を開く" onClick={() => dialog.current?.showModal()}><SettingsIcon size={19} /><span>設定</span></button>
+    {!hideTrigger && <button type="button" className="settings-trigger" aria-label="表示設定を開く" onClick={() => dialog.current?.showModal()}><SettingsIcon size={19} /></button>}
     <dialog ref={dialog} className="settings-dialog" aria-labelledby="settings-title">
       <header><h2 id="settings-title">表示設定</h2><button type="button" aria-label="設定を閉じる" onClick={() => dialog.current.close()}><X size={22} /></button></header>
       <p>この端末のブラウザに保存します。他の利用者の画面には影響しません。</p>

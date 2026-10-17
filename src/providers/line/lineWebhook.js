@@ -39,7 +39,7 @@ export function createLineWebhookRouter(messages, {
       catch { logEvent('LINE_PROFILE_UNAVAILABLE'); }
       const normalized = name ? mapLineEvent(event, name) : incoming;
       if (normalized.message.messageType === 'image') {
-        normalized.message.media = await mediaRepository.save(await getImage(normalized.message.platformMessageId));
+        normalized.message.media = await mediaRepository.save(await getImage(normalized.message.platformMessageId), 'line');
       }
       await messages.receive(normalized);
     }

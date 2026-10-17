@@ -1,6 +1,6 @@
 /* LINE画像を選択・確認して送信する。テキストとは別メッセージ。 */
 import React, { useEffect, useRef, useState } from 'react';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, Download } from 'lucide-react';
 import { api } from '../services/api.js';
 export default function ImageReply({ conversationId, sending, setSending, onSent, onError }) {
   const picker = useRef(null);
@@ -39,5 +39,8 @@ export default function ImageReply({ conversationId, sending, setSending, onSent
 export function MessageImage({ media }) {
   const [failed,setFailed]=useState(false);
   if(!media || !/^\/api\/media\/[0-9a-f-]{36}\.(png|jpg)$/.test(media.url)||failed)return <span>画像を表示できません。</span>;
-  return <a href={media.url} target="_blank" rel="noreferrer"><img className="message-image" src={media.url} alt="送受信した画像" loading="lazy" onError={()=>setFailed(true)} /></a>;
+  return <div className="message-image-actions">
+    <a href={media.url} target="_blank" rel="noreferrer"><img className="message-image" src={media.url} alt="送受信した画像" loading="lazy" onError={()=>setFailed(true)} /></a>
+    <a className="image-download" href={`${media.url}/download`} download aria-label="画像をダウンロード"><Download size={15} aria-hidden="true"/>ダウンロード</a>
+  </div>;
 }
