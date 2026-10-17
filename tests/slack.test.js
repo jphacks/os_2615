@@ -238,3 +238,40 @@ test('SDK loggerへ秘密情報らしい引数を渡しても固定イベント�
   assert.ok(!entries.join('').includes('private-token'));
   assert.ok(!entries.join('').includes('private-message'));
 });
+
+test('接続後の切断・再接続タイムアウトをcatchし、再接続・停止できる', async t => {
+  const { EventEmitter } = await import('node:events');
+  let socket; let attempts = 0; let receiverOptions;
+  class Receiver {
+    constructor(options) { receiverOptions = options; this.client = new EventEmitter(); socket = this.client; }
+  }
+  class ReconnectingApp {
+    constructor(options) {
+      this.receiver = options.receiver;
+      this.client = {
+        auth: { test: async () => authResponse },
+        chat: { postMessage: async () => ({ ok: true, channel: 'D_TEST_DM', ts: '1792200000.000001' }) }
+      };
+    }
+    error() {} event() {} async init() {}
+    async start() {
+      attempts++;
+      if (attempts === 2) throw Object.assign(new Error('private-timeout-details'), { code: 'slack_webapi_request_error' });
+    }
+    async stop() { this.receiver.client.emit('disconnected'); }
+  }
+  const receiver = createSlackReceiver({}, { botToken: 'test-bot', appToken: 'test-app', AppClass: ReconnectingApp, ReceiverClass: Receiver, reconnectDelayMs: 5 });
+  t.after(() => receiver.stop());
+  assert.equal(await receiver.start(), true);
+  assert.equal(receiverOptions.autoReconnectEnabled, false);
+  socket.emit('disconnected');
+  await assert.rejects(receiver.sendText({}), error => error.code === 'PROVIDER_ERROR');
+  const deadline = Date.now() + 1000;
+  while (attempts < 3 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(attempts, 3);
+  await receiver.stop();
+  const finalAttempts = attempts;
+  socket.emit('disconnected');
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(attempts, finalAttempts);
+});

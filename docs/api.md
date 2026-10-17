@@ -292,3 +292,28 @@ PATCH /api/contacts/:id/search-name に { "searchName": "おかばやしまひ�
 表示名・外部サービスの名前・会話状態は変更しない。新着受信時もsearchNameを保持する。
 Frontendは表示名とsearchNameを検索し、かな・幅・大小文字・空白の違いを吸収する。
 漢字の読みは自動推定せず、ユーザーが読み・別表記を登録する。
+
+## LINE画像（JPEG・PNG）
+
+共通Message.messageTypeにimageを追加。textは「[画像]」。
+media: { id, url, mimeType, size } を共通フィールドとして持つ。
+urlは /api/media/:id。LINE固有情報は引き続きmetadataへ隔離する。
+
+LINE画像受信時は署名検証後、保存済みのメッセージIDでLINE content APIから取得しdata/media/へ保存する。
+受信は最大10MB。取得・保存に失敗したイベントは成功扱いで破棄せず、Webhookへエラーを返す。
+外部contentProvider URLは自動取得せず、従来の未対応表示とする。
+
+POST /api/messages/reply-image?conversationId=...:
+本文はJPEG/PNGのバイナリ、Content-Typeはimage/jpegまたはimage/png。送信は最大1MB・1枚。
+JSON/Base64・画像URL・送信先IDの指定は受け付けない。現在はLINE会話だけが対象。
+成功201 { data: { message, conversation } }。画像もテキストと同じ送信ロックと状態更新を使う。
+結果不明はDELIVERY_UNKNOWN。自動再送しない。画像と文章は別メッセージとして送る。
+
+GET /api/media/:id: 管理画面用の画像。
+GET /media/:id（3001）: LINEがPush画像を取得するための公開経路。
+ファイル一覧・任意パス・SVG配信には対応しない。画像IDを知っている相手は取得できる。
+このMVPは認証未実装。公開運用前にアクセス制御・画像配信方式の検討が必要。
+
+Backendの.envにPUBLIC_BASE_URL=https://実際の公開ホストを追加する（末尾パスなし）。
+画像送信時はこのURL + /media/:idをLINEへ渡す。未設定・不正値は503 PUBLIC_URL_REQUIRED。
+ngrokのURLが変わったら更新してBackendを再起動する。

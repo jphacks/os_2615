@@ -32,7 +32,10 @@ function validateState(state) {
         typeof row.hasUnreplied !== 'boolean' ||
         !state.messages.some(item => item.id === row.lastMessageId && item.conversationId === row.id)) ||
       state.messages.some(row => !state.conversations.some(item => item.id === row.conversationId) ||
-        !Number.isFinite(Date.parse(row.timestamp))) ||
+        !Number.isFinite(Date.parse(row.timestamp)) ||
+        (row.messageType === 'image' && (!row.media ||
+          !/^[0-9a-f-]{36}\.(png|jpg)$/.test(row.media.id) || row.media.url !== `/api/media/${row.media.id}` ||
+          !['image/jpeg', 'image/png'].includes(row.media.mimeType) || !Number.isInteger(row.media.size) || row.media.size < 1))) ||
       state.reminders.some(row => !['pending', 'done', 'cancelled'].includes(row.status) ||
         !Number.isFinite(Date.parse(row.remindAt)) ||
         !state.messages.some(item => item.id === row.messageId && item.conversationId === row.conversationId))) {

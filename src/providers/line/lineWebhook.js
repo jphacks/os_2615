@@ -17,7 +17,8 @@ export function verifyLineSignature(rawBody, signature, channelSecret) {
 
 export function createLineWebhookRouter(messages, {
   channelSecret = process.env.LINE_CHANNEL_SECRET,
-  getDisplayName = async () => null
+  getDisplayName = async () => null,
+  getImage, mediaRepository
 } = {}) {
   const router = Router();
   // Content-Typeに関係なく同じバイト列を検証する。圧縮bodyも自動展開しない。
@@ -36,7 +37,11 @@ export function createLineWebhookRouter(messages, {
       let name = null;
       try { name = await getDisplayName(incoming.platformUserId); }
       catch { logEvent('LINE_PROFILE_UNAVAILABLE'); }
-      await messages.receive(name ? mapLineEvent(event, name) : incoming);
+      const normalized = name ? mapLineEvent(event, name) : incoming;
+      if (normalized.message.messageType === 'image') {
+        normalized.message.media = await mediaRepository.save(await getImage(normalized.message.platformMessageId));
+      }
+      await messages.receive(normalized);
     }
     res.json({ ok: true });
   });

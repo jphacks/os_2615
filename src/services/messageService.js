@@ -8,7 +8,7 @@ function validateIncoming(incoming) {
   if (!incoming || !['line', 'slack'].includes(incoming.platform) ||
       !['platformUserId', 'platformConversationId'].every(key => typeof incoming[key] === 'string' && incoming[key]) ||
       !message || message.platform !== incoming.platform || message.isFromMe !== false ||
-      !['text', 'sticker', 'other'].includes(message.messageType) ||
+      !['text', 'sticker', 'image', 'other'].includes(message.messageType) ||
       !['platformMessageId', 'senderId', 'senderName'].every(key => typeof message[key] === 'string' && message[key]) ||
       typeof message.text !== 'string' || typeof message.timestamp !== 'string' ||
       !Number.isFinite(Date.parse(message.timestamp)) || !message.metadata ||
