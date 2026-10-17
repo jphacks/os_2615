@@ -2,6 +2,20 @@
   "name": "konekuto",
   "version": "0.1.0",
   "private": true,
-  "description": "こねくとBackendの依存関係と実行設定。現在はディレクトリ構成のみ。",
-  "type": "module"
+  "description": "こねくとBackend。LINE・Slackを統合するInbox API。",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "test": "node --test tests/*.test.js",
+    "seed:demo": "node scripts/seedDemo.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^5.1.0",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0"
+  }
 }

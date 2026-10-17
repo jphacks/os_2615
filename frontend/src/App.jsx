@@ -703,8 +703,7 @@ export default function App() {
             <div className="modal-icon">
               <Clock3 size={25} />
             </div>
-            <h2 id="reminder-title">ちょうどいい時間に、返信を。</h2>
-            <p>{target.name}さんへの返信を、あとで思い出せるように。</p>
+            <h2 id="reminder-title">返信リマインダー</h2>
             <form onSubmit={saveReminder}>
               <ReminderCalendar
                 value={when}
