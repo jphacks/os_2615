@@ -317,3 +317,11 @@ GET /media/:id（3001）: LINEがPush画像を取得するための公開経路�
 Backendの.envにPUBLIC_BASE_URL=https://実際の公開ホストを追加する（末尾パスなし）。
 画像送信時はこのURL + /media/:idをLINEへ渡す。未設定・不正値は503 PUBLIC_URL_REQUIRED。
 ngrokのURLが変わったら更新してBackendを再起動する。
+
+### ドラッグによるタブの並び替え
+
+POST /api/tabs/reorder: { tabIds: string[], expectedOrder: string[] }。
+全タブIDを重複なく指定し、expectedOrderには操作開始時の順番を渡す。
+保存時点のタブ構成・順番が異なる場合は409 TAB_ORDER_CHANGEDで拒否し、他端末の変更を保護する。
+成功200 { data: Tab[] }。所属Contactや会話は変更せず、順番だけを保存する。
+PCはタブをドラッグ、スマホは横のつまみを長押しして移動する。既存の移動ボタンも利用できる。

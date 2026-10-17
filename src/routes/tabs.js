@@ -11,6 +11,7 @@ export function createTabsRouter(service) {
   });
   router.get('/', (_req, res) => res.json({ data: service.list() }));
   router.post('/', async (req, res) => res.status(201).json({ data: await service.create(req.body) }));
+  router.post('/reorder', async (req, res) => res.json({ data: await service.reorder(req.body) }));
   router.post('/:id/move', async (req, res) => res.json({ data: await service.move(req.params.id, req.body) }));
   router.delete('/:id', async (req, res) => res.json({ data: await service.remove(req.params.id) }));
   router.put('/:id/contacts/:contactId', async (req, res) => res.json({ data: await service.setMember(req.params.id, req.params.contactId, true) }));

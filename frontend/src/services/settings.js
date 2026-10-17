@@ -1,10 +1,11 @@
 /* 見やすさの設定は端末内だけに保存する。共有Inboxのデータは変更しない。 */
 export const SETTINGS_KEY = 'konekuto.settings.v1';
-export const defaultSettings = { theme: 'system', fontSize: 'normal' };
+export const defaultSettings = { theme: 'system', fontSize: 'normal', tabMoveMethod: 'both' };
 export function normalizeSettings(value) {
   return {
     theme: ['system', 'light', 'dark'].includes(value?.theme) ? value.theme : 'system',
-    fontSize: ['small', 'normal', 'large', 'extra-large'].includes(value?.fontSize) ? value.fontSize : 'normal'
+    fontSize: ['small', 'normal', 'large', 'extra-large'].includes(value?.fontSize) ? value.fontSize : 'normal',
+    tabMoveMethod: ['both', 'drag', 'buttons'].includes(value?.tabMoveMethod) ? value.tabMoveMethod : 'both'
   };
 }
 export function readSettings(storage) {

@@ -48,6 +48,9 @@ textarea:focus {
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
   width: 225px;
   border-right: 1px solid #e8e8e8;
   background: white;
@@ -1687,3 +1690,55 @@ h1 span {
 [data-theme="dark"] .toast { background: #e7e7e7; color: #202020; }
 [data-theme="dark"] .search { background: var(--surface); color: var(--muted-ink); }
 [data-theme="dark"] :is(.list-heading h2 span, .chosen small, .day-divider span) { background: var(--selected-surface); color: var(--muted-ink); }
+
+/* 並び順の見出しと移動ボタン列を分ける。 */
+.tab-order-controls { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px; }
+.tab-order-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tab-order-buttons { display: flex; flex-wrap: nowrap; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+.custom-tab-tools .tab-order-buttons button { flex: 1 0 auto; margin: 0; padding: 8px; white-space: nowrap; }
+/* ドラッグ用つまみ以外ではタッチスクロールを維持する。 */
+.sortable-tab { display: flex; align-items: stretch; flex-shrink: 0; border-radius: 8px; user-select: none; -webkit-user-select: none; }
+.sortable-tab > button:not(.tab-drag-handle) { cursor: grab; }
+.sortable-tab.is-dragging { background: var(--selected-surface); box-shadow: 0 0 0 2px var(--muted-ink); opacity: .7; }
+.sortable-tab.is-dragging > button { cursor: grabbing; }
+.draggable-tab-group .tab-drag-handle { display: inline-flex; align-items: center; justify-content: center; padding: 8px 4px; min-width: 26px; flex-shrink: 0; touch-action: none; cursor: grab; color: var(--muted-ink); border-radius: 6px; }
+.draggable-tab-group .tab-drag-handle:focus-visible { outline: 2px solid var(--muted-ink); outline-offset: -2px; }
+.sortable-tab.vertical > .nav-item { flex: 1; min-width: 0; margin: 0; padding-left: 4px; }
+.sortable-tab.vertical { margin-bottom: 4px; }
+.sidebar-tab-group.draggable-tab-group { min-width: 0; }
+/* 操作中のタブが指に追従し、元の場所は薄いプレースホルダーになる。 */
+.sortable-tab, .sortable-tab button { -webkit-touch-callout: none; }
+.sortable-tab.vertical > .nav-item { padding-left: 12px; }
+.sortable-tab.is-dragging { box-shadow: none; opacity: .22; }
+.floating-sort-tab { position: fixed; left: 0; top: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 6px 12px; pointer-events: none; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px #0003; font-size: calc(12px * var(--font-scale, 1)); will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .floating-sort-tab { box-shadow: none; } }
+
+/* 操作中はDOMを移動せず、flexの表示順だけを変更する。 */
+.sidebar-tab-group.draggable-tab-group { display: flex; flex-direction: column; }
+
+/* 浮いたタブも作成タブ枠の可視範囲から出さない。 */
+.tab-drag-boundary { position: fixed; z-index: 1000; pointer-events: none; overflow: hidden; border-radius: 9px; }
+.tab-drag-boundary .floating-sort-tab { position: absolute; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.settings-move-options { flex-direction: column; align-items: flex-start; }
+.drag-disabled .sortable-tab > button { cursor: pointer; }
+
+/* 実装済みサービスと将来の接続予定を区別する。 */
+.sidebar-bottom > .planned-services-title { margin-top: 22px; margin-bottom: 14px; }
+.planned-service-mark { display: inline-flex; align-items: center; justify-content: center; width: 30px; min-width: 30px; height: 26px; border: 1px dashed currentColor; border-radius: 5px; font-size: calc(9px * var(--font-scale, 1)); opacity: .7; }
+.planned-connection small { display: block; margin-top: 3px; font-size: calc(9px * var(--font-scale, 1)); }
+
+/* サイドバー内の項目を縮めず、画面を超えた分は縦スクロールする。 */
+.sidebar > * { flex-shrink: 0; }
+
+/* 返信時刻を過ぎた会話は、選択中でも薄い赤で目立たせる。 */
+.contact-card.reminder-due { background: #fff0f0; border-left-color: #dc7373; }
+.contact-card.reminder-due:hover, .contact-card.reminder-due.active { background: #ffe4e4; }
+.contact-card.reminder-due .later-chip.due { color: #b43333; }
+[data-theme="dark"] .contact-card.reminder-due { background: #3d2528; border-left-color: #e58a8a; }
+[data-theme="dark"] .contact-card.reminder-due:hover, [data-theme="dark"] .contact-card.reminder-due.active { background: #503035; }
+[data-theme="dark"] .contact-card.reminder-due .later-chip.due { color: #ffb5b5; }
+
+/* ブランド名は意図した二行で表示する。 */
+.brand b { flex-shrink: 0; line-height: 1.15; letter-spacing: 0; white-space: nowrap; }
+.brand b > span { display: block; }
