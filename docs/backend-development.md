@@ -11,8 +11,10 @@ npm test
 npm start
 ```
 
-http://127.0.0.1:3000 で起動する。現段階では外部Tokenなしで起動可能。
-管理APIを外部公開しない。FrontendはViteの/apiプロキシから接続する。
+管理APIは http://127.0.0.1:3000 、LINE専用Webhookは http://127.0.0.1:3001 で起動する。
+どちらかのポートを確保できなければ両方を停止する。
+外部Tokenなしでも起動可能だが、LINE_CHANNEL_SECRET未設定のWebhookは503を返す。
+管理APIを外部公開しない。FrontendはViteの/apiプロキシから3000番へ接続する。
 
 ```sh
 curl http://127.0.0.1:3000/api/health
@@ -42,12 +44,44 @@ curl http://127.0.0.1:3000/api/contacts/demo-contact-slack/messages
 - 単一プロセスのJSONストア。更新の直列化と一時ファイルからの置換。
 - 保存エラー・破損データの保護と共通エラー応答。
 - 再起動後の履歴・お気に入り・Reminder保持のテスト。
+- LINE Webhookのraw body署名検証、text・sticker・otherの共通形式への変換。
+- Contact・Conversation・Messageをまとめて保存し、新着を未返信にする。
+- LINE再配信の重複排除。遅延イベントで会話の最新表示を巻き戻さない。
+- LINEプロフィールの表示名取得。取得失敗時も代替名で受信し、既存の名前は保持する。
+
+## LINE実機確認
+
+1. ルートの.envにLINE_CHANNEL_SECRETとLINE_CHANNEL_ACCESS_TOKENを設定する。
+   値はソース・チャット・ログに貼らない。.env.exampleは空欄のまま維持する。
+2. 架空データを投入済みの場合は、サーバーを停止してdata/store.jsonをバックアップし、
+   実機確認用には空の保存先から始める。実データがある場合は削除しない。
+3. npm startで起動し、別ターミナルで次を実行する。
+
+```sh
+ngrok http http://127.0.0.1:3001
+```
+
+4. ngrokのHTTPS URLに/webhooks/lineを付けてLINE DevelopersのWebhook URLに設定する。
+   3000番の管理APIをngrokへ転送しない。
+5. Consoleの検証が成功することを確認し、Webhook利用を有効にする。
+6. こねくとLINEへ1対1でテキストとスタンプを送る。
+7. GET /api/contactsでLINEのContactを取得し、そのidで履歴を確認する。
+8. サーバー再起動後も同じ会話・履歴が残ることを確認する。
+
+署名不正は401、署名Secret未設定は503、保存失敗は500を返す。
+プロフィール取得だけ失敗した場合は受信自体を成功させ、固定名のログイベントを出す。
+表示名取得のタイムアウトは1.5秒。成功した名前はプロセス内でキャッシュする。
+受信時の自動返信は行わず、replyTokenは保存しない。
+再配信で途中まで保存済みのバッチが届いても、処理済みメッセージを飛ばして残りを処理する。
+
+署名検証・プロフィール取得の仕様は[LINE Messaging API公式リファレンス](https://developers.line.biz/en/reference/messaging-api/)に従う。
 
 ## 次の段階
 
-LINE署名検証・受信保存、Slack Socket Mode、外部返信、
-お気に入りとReminderの更新APIは未実装。これらのAPIは現段階では404を返す。
-現時点のテストには実サービス送受信は含まれない。
+Slack Socket Mode、外部返信、お気に入りとReminderの更新APIは未実装。
+未実装のHTTP APIは404を返す。
+自動テストは署名付きHTTPリクエストとプロフィールAPIのStubで検証している。
+実サービスとの送受信確認は上記手順で別途行う。
 
 data/はGit管理外。1つの保存ファイルを複数プロセスで同時に開かない。
 ファイル欠落時だけ空状態で起動し、破損時は起動を失敗させて既存ファイルを保持する。
