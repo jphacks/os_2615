@@ -7,13 +7,18 @@ export default function PlatformFilter({ value, onChange }) {
   useEffect(() => {
     if (!open) return;
     buttons.current[options.findIndex(([id]) => id === value)]?.focus();
+    // iOSではタップ時のblurでrelatedTargetがnullになるため、外側の操作で閉じる。
     const close = e => { if (!root.current?.contains(e.target)) setOpen(false); };
     document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
+    document.addEventListener('focusin', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('focusin', close);
+    };
   }, [open, value]);
   return <div className="platform-filter">
     <span>サービス</span>
-    <div className="platform-picker" ref={root} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }} onKeyDown={e => {
+    <div className="platform-picker" ref={root} onKeyDown={e => {
       if (e.key === 'Escape') { e.preventDefault(); setOpen(false); trigger.current?.focus(); }
       if (open && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
         e.preventDefault();
