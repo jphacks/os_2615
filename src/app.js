@@ -1,5 +1,5 @@
 /*
-管理APIとLINE専用Webhookアプリを組み立て、別ポートでローカル起動する。
+管理API・LINE専用Webhookを別ポートで起動し、Slack Socket Modeも同じ保存層へ接続する。
 */
 import 'dotenv/config';
 import express from 'express';
@@ -15,6 +15,7 @@ import { AppError, notFound } from './utils/errors.js';
 import { logEvent } from './utils/logger.js';
 import { createLineWebhookRouter } from './providers/line/lineWebhook.js';
 import { createLineClient } from './providers/line/lineClient.js';
+import { createSlackReceiver } from './providers/slack/slackEvents.js';
 
 function errorHandler(error, _req, res, _next) {
   let safe = error instanceof AppError ? error : new AppError(500, 'INTERNAL_ERROR', '処理に失敗しました。');
@@ -56,11 +57,23 @@ export function createApp(store) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const store = await createJsonStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
+    const slack = createSlackReceiver(createMessageService(createMessageRepository(store)));
+    let closing = false;
     let listening = 0;
-    const onListening = () => { if (++listening === 2) logEvent('SERVER_STARTED'); };
+    const onListening = () => {
+      if (++listening === 2 && !closing) {
+        logEvent('SERVER_STARTED');
+        void slack.start();
+      }
+    };
     const servers = [createApp(store).listen(3000, '127.0.0.1', onListening),
       createWebhookApp(store).listen(3001, '127.0.0.1', onListening)];
-    const close = () => servers.forEach(server => server.close());
+    const close = () => {
+      if (closing) return;
+      closing = true;
+      servers.forEach(server => server.close());
+      void slack.stop();
+    };
     for (const server of servers) server.on('error', () => {
       logEvent('SERVER_ERROR'); process.exitCode = 1; close();
     });
