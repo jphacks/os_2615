@@ -9,6 +9,12 @@ export function createTabService(repository) {
           !input.name.trim() || input.name.trim().length > 40) throw invalidInput();
       return repository.create(input.name.trim());
     },
+    rename(id, input) {
+      if (!input || Array.isArray(input) || typeof input !== 'object' ||
+          Object.keys(input).length !== 1 || typeof input.name !== 'string' ||
+          !input.name.trim() || input.name.trim().length > 40) throw invalidInput();
+      return repository.rename(id, input.name.trim());
+    },
     reorder(input) {
       if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 2 ||
           !['tabIds', 'expectedOrder'].every(key => Array.isArray(input[key]) &&

@@ -2,7 +2,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { tabSlotIndex, tabOrderAt } from '../services/tabDrag.js';
-export default function DraggableTabs({ tabs, filter, counts, dragEnabled = true, vertical = false, onSelect, onAdd, onReorder, onError }) {
+export default function DraggableTabs({ tabs, filter, counts, dragEnabled = true, vertical = false, onSelect, onAdd, onReorder, onError, onEdit }) {
   const [preview, setPreview] = useState(null);
   const [dragging, setDragging] = useState(null);
   const [ghost, setGhost] = useState(null);
@@ -184,7 +184,7 @@ export default function DraggableTabs({ tabs, filter, counts, dragEnabled = true
     <div ref={group} data-sort-group className={`${vertical ? 'sidebar-tab-group' : 'tab-group'} draggable-tab-group ${dragEnabled ? '' : 'drag-disabled'}`} role="group" aria-label="ユーザー作成タブ" aria-busy={saving}>
       {shown.map(tab => <div key={tab.id} data-sort-tab={tab.id} style={{ order: preview ? preview.indexOf(tab.id) : undefined }} className={`sortable-tab ${vertical ? 'vertical' : ''} ${dragging === tab.id ? 'is-dragging' : ''}`}
         onPointerDown={event => { if (dragEnabled && !saving && !drag.current && event.pointerType === 'mouse' && event.button === 0) begin(event.currentTarget, tab.id, event.clientX, event.clientY, 'mouse', event.pointerId); }}
-        onTouchStart={event => startTouch(event, tab.id)} onContextMenu={event => { if (dragEnabled) event.preventDefault(); }}>
+        onTouchStart={event => startTouch(event, tab.id)} onContextMenu={event => { event.preventDefault(); if (drag.current?.kind === 'touch') return; if (drag.current) void finish(true); if (!saving) onEdit?.(tab.id); }}>
         <button type="button" disabled={saving} title={dragEnabled ? 'ドラッグで並び替え（スマホは長押し）' : undefined} className={`${vertical ? 'nav-item' : ''} ${filter === `tab:${tab.id}` ? 'chosen' : ''}`} onClick={() => { if (Date.now() > suppressClick.current) onSelect(`tab:${tab.id}`); }}>
           <span>{tab.name}</span>{vertical && <small>{counts[`tab:${tab.id}`]}</small>}
         </button>

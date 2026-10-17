@@ -1,4 +1,4 @@
-/* 画像バイナリをJSONと分離し、推測しにくいIDで保存・配信する。 */
+/* 画像をプラットフォーム別に保存する。公開URLはIDのみとし、旧保存先も読める。 */
 import * as fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -13,18 +13,22 @@ export function imageType(bytes) {
 }
 export function createMediaRepository(directory = fileURLToPath(new URL('../../data/media/', import.meta.url))) {
   return {
-    async save(bytes, maxBytes = MAX_IMAGE_BYTES) {
+    async save(bytes, platform, maxBytes = MAX_IMAGE_BYTES) {
+      if (!['line', 'slack'].includes(platform)) throw invalidInput();
       if (bytes.length > maxBytes) throw new AppError(413, 'PAYLOAD_TOO_LARGE', '画像の容量が上限を超えています。');
       const mimeType = imageType(bytes);
       const id = `${randomUUID()}.${mimeType === 'image/png' ? 'png' : 'jpg'}`;
-      try { await fs.mkdir(directory,{recursive:true}); await fs.writeFile(join(directory,id),bytes,{flag:'wx',mode:0o600}); }
+      try { const folder = join(directory, platform); await fs.mkdir(folder,{recursive:true}); await fs.writeFile(join(folder,id),bytes,{flag:'wx',mode:0o600}); }
       catch { throw storageError(); }
       return { id, url: `/api/media/${id}`, mimeType, size: bytes.length };
     },
     async read(id) {
       if (!/^[0-9a-f-]{36}\.(png|jpg)$/.test(id)) throw notFound();
-      try { return { bytes: await fs.readFile(join(directory,id)), mimeType: id.endsWith('.png') ? 'image/png' : 'image/jpeg' }; }
-      catch(error) { if(error.code === 'ENOENT') throw notFound(); throw storageError(); }
+      for (const folder of ['line', 'slack', 'unassigned', '']) {
+        try { return { bytes: await fs.readFile(join(directory,folder,id)), mimeType: id.endsWith('.png') ? 'image/png' : 'image/jpeg' }; }
+        catch(error) { if(error.code !== 'ENOENT') throw storageError(); }
+      }
+      throw notFound();
     }
   };
 }

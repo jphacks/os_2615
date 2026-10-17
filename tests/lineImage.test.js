@@ -72,3 +72,13 @@ test('LINE content取得は固定APIを使い容量超過・エラーを安全�
  const large=createLineClient({accessToken:'secret',fetchImpl:async()=>new Response('',{headers:{'content-length':String(11*1024*1024)}})});
  await assert.rejects(large.getImage('x'),e=>e.code==='PROVIDER_ERROR');
 });
+test('受信画像は元のバイナリと安全なファイル名でダウンロードできる',async t=>{
+ const f=await setup(t);await f.post();const media=f.store.read().messages[0].media;
+ const response=await fetch(`${f.api}${media.url}/download`);
+ assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');
+ assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+ assert.match(response.headers.get('content-disposition'),new RegExp(`^attachment; filename="?konekuto-${media.id}"?$`));
+ assert.deepEqual(Buffer.from(await response.arrayBuffer()),png);
+ assert.equal((await fetch(`${f.api}${media.url}/download?file=anything`)).status,400);
+ assert.equal((await fetch(`${f.api}/api/media/not-an-id/download`)).status,404);
+});

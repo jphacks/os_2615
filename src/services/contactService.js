@@ -5,6 +5,11 @@ import { invalidInput } from '../utils/errors.js';
 
 export function createContactService(repository) {
   return {
+    complete(contactId, input) {
+      if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 ||
+          typeof input.lastMessageId !== 'string' || !input.lastMessageId.trim()) throw invalidInput();
+      return repository.complete(contactId, input.lastMessageId);
+    },
     setSearchName(contactId, input) {
       if (!input || typeof input !== 'object' || Array.isArray(input) ||
           Object.keys(input).length !== 1 || typeof input.searchName !== 'string' ||

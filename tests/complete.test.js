@@ -1,0 +1,34 @@
+/* 返信なしの対応完了・保存・新着との競合を検証する。 */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as fs from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {createJsonStore} from '../src/repositories/jsonStore.js';
+import {createMessageRepository} from '../src/repositories/messageRepository.js';
+import {createApp} from '../src/app.js';
+import {demoState} from './fixtures/demoState.js';
+test('対応完了は送信せず永続化し、新着で未返信に戻る。古い画面からの完了を拒否する', async t => {
+ const dir=await fs.mkdtemp(join(tmpdir(),'konekuto-complete-'));
+ t.after(()=>fs.rm(dir,{recursive:true,force:true}));
+ const path=join(dir,'store.json');const state=demoState();
+ const conv=state.conversations[0];const contact=state.contacts.find(c=>c.id===conv.contactId);
+ state.reminders=[{id:'complete-reminder',conversationId:conv.id,messageId:conv.lastMessageId,remindAt:'2026-10-17T15:00:00+09:00',status:'pending'}];
+ await fs.writeFile(path,JSON.stringify(state));const store=await createJsonStore(path);
+ const server=createApp(store,{providers:{}}).listen(0,'127.0.0.1');
+ await new Promise((resolve,reject)=>{server.once('listening',resolve);server.once('error',reject)});
+ t.after(()=>new Promise(resolve=>{server.close(resolve);server.closeAllConnections()}));
+ const call=async(id,body)=>{const r=await fetch(`http://127.0.0.1:${server.address().port}/api/contacts/${id}/complete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return {status:r.status,body:await r.json()}};
+ assert.equal((await call(contact.id,{lastMessageId:conv.lastMessageId})).status,200);
+ assert.equal(store.read().conversations[0].hasUnreplied,false);
+ assert.equal(store.read().reminders[0].status,'done');
+ assert.deepEqual(store.read().messages,state.messages);
+ assert.deepEqual((await createJsonStore(path)).read(),store.read());
+ const latest=state.messages.find(m=>m.id===conv.lastMessageId);
+ await createMessageRepository(store).receive({platform:contact.platform,platformUserId:contact.platformUserId,platformConversationId:conv.platformConversationId,message:{...latest,platformMessageId:'new-complete-test',timestamp:'2027-01-01T00:00:00.000Z',text:'新着',isFromMe:false,metadata:{}}});
+ assert.equal(store.read().conversations[0].hasUnreplied,true);
+ assert.equal((await call(contact.id,{lastMessageId:conv.lastMessageId})).status,409);
+ assert.equal(store.read().conversations[0].hasUnreplied,true);
+ for(const body of [{},{lastMessageId:5},{lastMessageId:''},{lastMessageId:conv.lastMessageId,extra:1},null])assert.equal((await call(contact.id,body)).status,400);
+ assert.equal((await call('missing',{lastMessageId:conv.lastMessageId})).status,404);
+});

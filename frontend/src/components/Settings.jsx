@@ -2,11 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Settings as SettingsIcon, X } from 'lucide-react';
 import { SETTINGS_KEY, applySettings, defaultSettings, readSettings, writeSettings } from '../services/settings.js';
-export default function Settings({ onTabMoveMethodChange }) {
+export default function Settings({ onTabMoveMethodChange, openRequest, hideTrigger = false }) {
   const dialog = useRef(null);
   const [settings, setSettings] = useState(() => {
     try { return readSettings(window.localStorage); } catch { return { ...defaultSettings }; }
   });
+  useEffect(() => { if (openRequest) dialog.current?.showModal(); }, [openRequest]);
   const [saved, setSaved] = useState(true);
   useEffect(() => {
     applySettings(settings);
@@ -27,7 +28,7 @@ export default function Settings({ onTabMoveMethodChange }) {
     return () => window.removeEventListener('storage', changed);
   }, []);
   return <>
-    <button type="button" className="settings-trigger" aria-label="表示設定を開く" onClick={() => dialog.current?.showModal()}><SettingsIcon size={19} /><span>設定</span></button>
+    {!hideTrigger && <button type="button" className="settings-trigger" aria-label="表示設定を開く" onClick={() => dialog.current?.showModal()}><SettingsIcon size={19} /></button>}
     <dialog ref={dialog} className="settings-dialog" aria-labelledby="settings-title">
       <header><h2 id="settings-title">表示設定</h2><button type="button" aria-label="設定を閉じる" onClick={() => dialog.current.close()}><X size={22} /></button></header>
       <p>この端末のブラウザに保存します。他の利用者の画面には影響しません。</p>
@@ -40,7 +41,7 @@ export default function Settings({ onTabMoveMethodChange }) {
       <fieldset><legend>タブの移動方法</legend><div className="settings-options settings-move-options">
         {[['both','両方で移動する（標準）'],['drag','ドラッグ＆ドロップで移動する'],['buttons','ボタン操作で移動する']].map(([value,label]) => <label key={value}><input type="radio" name="tabMoveMethod" value={value} checked={settings.tabMoveMethod===value} onChange={() => setSettings(current => ({...current,tabMoveMethod:value}))} />{label}</label>)}
       </div><p>ボタン操作では「一番前へ・前へ・後へ・一番後ろへ」を使います。</p></fieldset>
-      <div className="settings-sample"><strong>表示プレビュー</strong><p>誰から届いて、誰に返すかを こねくと で。</p><span>変更は画面全体へすぐに反映されます。</span></div>
+      <div className="settings-sample"><strong>表示プレビュー</strong><p>誰から届いて、誰に返すかを こねくと ひとつで。</p><span>変更は画面全体へすぐに反映されます。</span></div>
       {!saved && <p role="alert">ブラウザに設定を保存できませんでした。この画面では反映されますが、次回は元に戻る場合があります。</p>}
       <footer><button type="button" onClick={() => setSettings({...defaultSettings})}>標準に戻す</button><button type="button" onClick={() => dialog.current.close()}>完了</button></footer>
     </dialog>

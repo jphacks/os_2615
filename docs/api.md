@@ -325,3 +325,27 @@ POST /api/tabs/reorder: { tabIds: string[], expectedOrder: string[] }。
 保存時点のタブ構成・順番が異なる場合は409 TAB_ORDER_CHANGEDで拒否し、他端末の変更を保護する。
 成功200 { data: Tab[] }。所属Contactや会話は変更せず、順番だけを保存する。
 PCはタブをドラッグ、スマホは横のつまみを長押しして移動する。既存の移動ボタンも利用できる。
+
+### PATCH /api/tabs/:id
+
+タブ名を変更する。本文 `{ "name": "仕事" }`（前後空白を除き1〜40文字）。成功時 `{ "data": CustomTab }`。所属・順序・IDを保持する。
+
+### POST /api/contacts/:id/complete
+
+本文 `{ "lastMessageId": "表示中の最終メッセージID" }`。送信せず未返信を解除し、pendingのリマインダーをdoneにする。成功時 `{ "data": Conversation }`。最終メッセージが変わっていたら409。新しい受信で再び未返信になる。
+
+### 予約送信（テキストのみ）
+
+- `GET /api/scheduled-messages?conversationId=...`：予約一覧（省略時は全件）。
+- `POST /api/scheduled-messages`：`{ "requestId": "UUID v4", "conversationId": "...", "text": "...", "sendAt": "ISO 8601日時" }`。未来日時・1〜5000文字。同一requestId・同一内容の再要求は重複登録しません。
+- `DELETE /api/scheduled-messages/:id`：pendingの予約を取消。送信開始後は409。
+
+共通レスポンスは `{ "data": ... }`。予約は `{ id, conversationId, text, sendAt, createdAt, status }`。statusはpending / sending / sent / failed / unknown / missed / cancelledです。
+
+単一Backendの起動中に約1秒ごとに実行します。再起動時にsendingだった予約はunknown、停止中に期限を過ぎた予約はmissedとし、自動再送しません。起動中でも5分を超えて遅延した予約はmissedです。送信前にsendingを保存し、成功後は履歴とsentを同じ保存処理で確定します。通常返信・対応済み操作では予約は取消しません。
+
+予約送信の上限は、受付時点から14日後（336時間後）までです。それより先の日時は400で拒否します。
+
+### GET /api/media/:id/download
+
+保存済み画像を `Content-Disposition: attachment` で返します。通常表示用URLは従来どおり利用できます。

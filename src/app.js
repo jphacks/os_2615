@@ -8,6 +8,7 @@ import { createTabRepository } from './repositories/tabRepository.js';
 import { createTabService } from './services/tabService.js';
 import { createTabsRouter } from './routes/tabs.js';
 import express from 'express';
+import { createScheduledMessageService } from './services/scheduledMessageService.js';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSplitStore } from './repositories/splitStore.js';
@@ -16,7 +17,7 @@ import { createMessageRepository } from './repositories/messageRepository.js';
 import { createContactService } from './services/contactService.js';
 import { createMessageService } from './services/messageService.js';
 import { createContactsRouter } from './routes/contacts.js';
-import { AppError, notFound } from './utils/errors.js';
+import { AppError, notFound, invalidInput as invalidScheduleQuery } from './utils/errors.js';
 import { logEvent } from './utils/logger.js';
 import { createLineWebhookRouter } from './providers/line/lineWebhook.js';
 import { createLineClient } from './providers/line/lineClient.js';
@@ -60,7 +61,23 @@ export function createApp(store, { providers = { line: createLineClient() }, med
   app.use('/api/media', createMediaRouter(mediaRepository));
   app.use('/api/tabs', createTabsRouter(createTabService(createTabRepository(store))));
   app.use('/api/reminders', createRemindersRouter(createReminderService(createReminderRepository(store))));
-  app.use('/api/messages', createMessagesRouter(createReplyService(createMessageRepository(store), providers, { mediaRepository, publicBaseUrl })));
+  const replies = createReplyService(createMessageRepository(store), providers, { mediaRepository, publicBaseUrl });
+  app.use('/api/messages', createMessagesRouter(replies));
+  const schedules = createScheduledMessageService(store, replies);
+  app.locals.schedules = schedules;
+  app.get('/api/scheduled-messages', (req, res) => {
+    if (Object.keys(req.query).some(key => key !== 'conversationId')) throw invalidScheduleQuery();
+    res.json({ data: schedules.list(req.query.conversationId) });
+  });
+  app.post('/api/scheduled-messages', async (req, res) => {
+    if (Object.keys(req.query).length) throw invalidScheduleQuery();
+    res.status(201).json({ data: await schedules.create(req.body) });
+  });
+  app.delete('/api/scheduled-messages/:id', async (req, res) => {
+    if (Object.keys(req.query).length || req.body !== undefined &&
+        (!req.body || typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).length)) throw invalidScheduleQuery();
+    res.json({ data: await schedules.cancel(req.params.id) });
+  });
   app.use('/api/contacts', createContactsRouter(
     createContactService(createContactRepository(store)),
     createMessageService(createMessageRepository(store))
@@ -74,19 +91,22 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const store = await createSplitStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
     const slack = createSlackReceiver(createMessageService(createMessageRepository(store)));
+    const adminApp = createApp(store, { providers: { line: createLineClient(), slack } });
     let closing = false;
     let listening = 0;
     const onListening = () => {
       if (++listening === 2 && !closing) {
         logEvent('SERVER_STARTED');
         void slack.start();
+        void adminApp.locals.schedules.start().catch(() => logEvent('SCHEDULE_PROCESS_FAILED'));
       }
     };
-    const servers = [createApp(store, { providers: { line: createLineClient(), slack } }).listen(3000, '127.0.0.1', onListening),
+    const servers = [adminApp.listen(3000, '127.0.0.1', onListening),
       createWebhookApp(store).listen(3001, '127.0.0.1', onListening)];
     const close = () => {
       if (closing) return;
       closing = true;
+      adminApp.locals.schedules.stop();
       servers.forEach(server => server.close());
       void slack.stop();
     };

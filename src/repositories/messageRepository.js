@@ -34,7 +34,7 @@ export function createMessageRepository(store) {
       return { conversation, contact,
         reminder: state.reminders.find(item => item.conversationId === conversationId && item.status === 'pending') ?? null };
     },
-    saveReply(context, draft) {
+    saveReply(context, draft, scheduledId) {
       return store.update(state => {
         const conversation = state.conversations.find(item => item.id === context.conversation.id);
         if (!conversation || draft.platform !== conversation.platform) throw invalidInput();
@@ -42,6 +42,11 @@ export function createMessageRepository(store) {
         if (!contact) throw invalidInput();
         const currentLast = state.messages.find(item => item.id === conversation.lastMessageId);
         const newIncoming = conversation.lastMessageId !== context.conversation.lastMessageId && currentLast?.isFromMe === false;
+        if (scheduledId) {
+          const job = (state.scheduledMessages ?? []).find(row => row.id === scheduledId);
+          if (!job || job.status !== 'sending' || job.conversationId !== conversation.id || job.text !== draft.text) throw invalidInput();
+          job.status = 'sent';
+        }
         const message = createSentMessage(draft, conversation.id);
         state.messages.push(message);
         const latest = refreshLatest(state, conversation, contact);

@@ -2,9 +2,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { matchesContact } from '../services/contactSearch.js';
 import { api } from '../services/api.js';
-export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, creating, onCloseCreate, showOrderControls = true }) {
+export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, creating, onCloseCreate, showOrderControls = true, editRequest }) {
   const [expanded, setExpanded] = useState(false);
   const nameInput = useRef(null);
+  const renameInput = useRef(null);
+  const handledEditRequest = useRef(null);
+  const [rename, setRename] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -16,6 +19,19 @@ export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, c
     if (creating) { setExpanded(true); }
   }, [creating, selected?.id]);
   useEffect(() => { if (creating && expanded) nameInput.current?.focus(); }, [creating, expanded]);
+  useEffect(() => { setRename(selected?.name ?? ''); }, [selected?.id, selected?.name]);
+  useEffect(() => {
+    // 右クリック要求は一度だけ処理し、通常の再選択では開き直さない。
+    if (editRequest && editRequest.id === selected?.id && handledEditRequest.current !== editRequest) {
+      handledEditRequest.current = editRequest;
+      setExpanded(true);
+    }
+  }, [editRequest, selected?.id]);
+  useEffect(() => {
+    if (expanded && editRequest && editRequest.id === selected?.id) {
+      renameInput.current?.focus(); renameInput.current?.select();
+    }
+  }, [expanded, editRequest, selected?.id]);
   async function run(operation) {
     if (busy) return;
     setBusy(true); setError('');
@@ -37,6 +53,10 @@ export default function CustomTabs({ tabs, items, filter, onSelect, onRefresh, c
         <button type="button" disabled={busy} onClick={onCloseCreate}>キャンセル</button>
       </form>}
       {selected && <>
+        <form className="tab-rename-form" onSubmit={event => { event.preventDefault(); run(() => api.renameTab(selected.id, rename)); }}>
+          <label>名前を変更する<input ref={renameInput} value={rename} maxLength={40} disabled={busy} onChange={event => setRename(event.target.value)} /></label>
+          <button disabled={busy || !rename.trim() || rename.trim() === selected.name}>名前を保存</button>
+        </form>
         {showOrderControls && <div className="tab-order-controls" role="group" aria-label="タブの並び順">
           <div className="tab-order-heading">
             <span>並び順</span>

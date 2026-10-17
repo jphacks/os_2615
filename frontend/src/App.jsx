@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Settings as SettingsIcon,
   Link2,
   Inbox,
   MessageCircle,
@@ -22,6 +23,8 @@ import { readSettings } from "./services/settings.js";
 import Settings from "./components/Settings.jsx";
 import InstallApp from "./components/InstallApp.jsx";
 import DraggableTabs from "./components/DraggableTabs.jsx";
+import ScheduledMessages from "./components/ScheduledMessages.jsx";
+import PlatformFilter from "./components/PlatformFilter.jsx";
 import CustomTabs from "./components/CustomTabs.jsx";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
 import ReminderAlerts from "./components/ReminderAlerts.jsx";
@@ -66,14 +69,19 @@ function Avatar({ contact: c }) {
 }
 export default function App() {
   const [tabMoveMethod, setTabMoveMethod] = useState(() => { try { return readSettings(window.localStorage).tabMoveMethod; } catch { return 'both'; } });
+  const [settingsRequest, setSettingsRequest] = useState(0);
+  const settingsButton = <button type="button" className="icon-button header-settings" aria-label="表示設定を開く" title="表示設定" onClick={() => setSettingsRequest(value => value + 1)}><SettingsIcon size={19} /></button>;
   const [tabs, setTabs] = useState([]);
   const [creatingTab, setCreatingTab] = useState(false);
+  const [tabEditRequest, setTabEditRequest] = useState(null);
+  function editTabName(id) { setCreatingTab(false); setFilter(`tab:${id}`); setTabEditRequest({ id }); }
   const filters = [...baseFilters, ...tabs.map(tab => [`tab:${tab.id}`, tab.name, Inbox])];
   const matchesFilter = (item, value) => value.startsWith("tab:")
     ? Boolean(tabs.find(tab => `tab:${tab.id}` === value)?.contactIds.includes(item.contact.id))
     : matches(item, value);
   const [items, setItems] = useState([]),
     [filter, setFilter] = useState("all"),
+    [platformFilter, setPlatformFilter] = useState("all"),
     [query, setQuery] = useState(""),
     [active, setActive] = useState(null),
     [detail, setDetail] = useState(null),
@@ -285,13 +293,14 @@ export default function App() {
       }
     }
   }
-  const visible = items.filter(
+  const platformItems = items.filter(i => platformFilter === "all" || i.contact.platform === platformFilter);
+  const visible = platformItems.filter(
     (i) =>
       matchesFilter(i, filter) &&
       matchesContact(i.contact, query),
   );
   const counts = Object.fromEntries(
-    filters.map(([f]) => [f, items.filter((i) => matchesFilter(i, f)).length]),
+    filters.map(([f]) => [f, platformItems.filter((i) => matchesFilter(i, f)).length]),
   );
   const due = items.filter(
     (i) => i.reminder && Date.parse(i.reminder.remindAt) <= now,
@@ -301,7 +310,7 @@ export default function App() {
       <aside className="sidebar">
         <a href="./" className="brand">
           <span>
-            <img src="/konekuto-icon.svg" alt="" width="44" height="44" />
+            <img src="/konekuto-crayon.png" alt="" width="44" height="44" />
           </span>
           <b>
             <span>こね</span><span>くと</span>
@@ -311,7 +320,7 @@ export default function App() {
           <div className="sidebar-tab-group" role="group" aria-label="標準フィルタ">
             {baseFilters.map(([f, label, Icon]) => <button key={f} className={`nav-item ${filter === f ? "chosen" : ""}`} onClick={() => setFilter(f)}><Icon size={18} /><span>{label}</span><small>{counts[f]}</small></button>)}
           </div>
-          <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} vertical onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
+          <DraggableTabs onEdit={editTabName} dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} vertical onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
         </nav>
         <div className="sidebar-bottom">
           <p>つながっているサービス</p>
@@ -347,20 +356,7 @@ export default function App() {
       </aside>
       <main>
         <InstallApp />
-        <section className="heading">
-          <Settings onTabMoveMethodChange={setTabMoveMethod} />
-          <div className="date">
-            {new Date(now).toLocaleDateString("ja-JP", {
-              month: "long",
-              day: "numeric",
-              weekday: "long",
-            })}
-            <small>
-              <i />
-              {counts.unreplied}件の会話が返信を待っています
-            </small>
-          </div>
-        </section>
+        <Settings hideTrigger openRequest={settingsRequest} onTabMoveMethodChange={setTabMoveMethod} />
         {error && (
           <div className="error" role="alert">
             <span>{error}</span>
@@ -382,17 +378,19 @@ export default function App() {
           <section className="inbox-panel" aria-label="会話一覧">
             <div className="list-heading">
               <h2>
-                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}の会話{" "}
+                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}{" "}
                 <span>{visible.length}</span>
               </h2>
               <button
-                className="icon-button"
+                className="icon-button list-refresh"
                 aria-label="会話一覧を更新"
                 onClick={refresh}
               >
                 <RefreshCw size={15} />
               </button>
+              {settingsButton}
             </div>
+            <PlatformFilter value={platformFilter} onChange={setPlatformFilter} />
             <label className="search">
               <Search size={16} />
               <input
@@ -411,9 +409,9 @@ export default function App() {
               <div className="tab-group" role="group" aria-label="標準フィルタ">
                 {baseFilters.map(([f, label]) => <button key={f} className={filter === f ? "chosen" : ""} onClick={() => setFilter(f)}>{label}</button>)}
               </div>
-              <DraggableTabs dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
+              <DraggableTabs onEdit={editTabName} dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
             </div>
-            <CustomTabs showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
+            <CustomTabs editRequest={tabEditRequest} showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
@@ -423,12 +421,12 @@ export default function App() {
                   <h3>
                     {query
                       ? "一致する名前がありません"
-                      : filter.startsWith("tab:") ? "このタブに相手が登録されていません" : "会話はまだありません"}
+                      : platformFilter !== "all" ? "条件に一致する会話がありません" : filter.startsWith("tab:") ? "このタブに相手が登録されていません" : "会話はまだありません"}
                   </h3>
                   <p>
                     {query
                       ? "別の名前で検索してください。"
-                      : filter.startsWith("tab:") ? "上のメンバー編集から相手を選んでください。" : "会話が届くと、ここに表示されます。"}
+                      : platformFilter !== "all" ? "サービスやタブの選択を変更してください。" : filter.startsWith("tab:") ? "上のメンバー編集から相手を選んでください。" : "会話が届くと、ここに表示されます。"}
                   </p>
                 </div>
               ) : (
@@ -464,7 +462,7 @@ export default function App() {
                           ) : (
                             <span className="replied">
                               <Check size={11} />
-                              返信済み
+                              {m?.isFromMe ? "返信済み" : "対応済み"}
                             </span>
                           )}
                           {r && (
@@ -488,7 +486,7 @@ export default function App() {
             <div className="list-footer">
               <i />
               5秒ごとに更新
-              <span>{items.length} conversations</span>
+              <span>{visible.length} conversations</span>
             </div>
           </section>
           <section className="conversation-panel" aria-label="会話詳細">
@@ -540,11 +538,20 @@ export default function App() {
                     <ArrowLeft size={20} />
                   </button>
                   <Avatar contact={selected.contact} />
-                  <div>
+                  <div className="conversation-person">
                     <h2>{selected.contact.displayName}</h2>
                     <Platform value={selected.contact.platform} />
                     <span className="dm-label">ダイレクトメッセージ</span>
                   </div>
+                  {selected.conversation.hasUnreplied && <button
+                    type="button" className="complete-button" disabled={busy || sending}
+                    title="メッセージを送らず対応を完了し、リマインダーも終了します"
+                    onClick={() => action(() => api.complete(selected.contact.id, selected.conversation.lastMessageId), "対応済みにしました")}>
+                    <Check size={16} />対応済みにする
+                  </button>}
+                  <button type="button" className="later-button header-later" disabled={busy || sending || !selected.messages.length} onClick={showReminder}>
+                    <Clock3 size={15} />後で返信
+                  </button>
                   <button
                     className={`favorite-button ${selected.contact.isFavorite ? "is-favorite" : ""}`}
                     aria-label={
@@ -567,6 +574,7 @@ export default function App() {
                   >
                     <Star size={20} />
                   </button>
+                  {settingsButton}
                 </header>
                 {selected.reminder && (
                   <div
@@ -667,16 +675,8 @@ export default function App() {
                       }}
                     />
                     <div className="composer-actions">
-                      <button
-                        type="button"
-                        className="later-button"
-                        disabled={busy || sending || !selected.messages.length}
-                        onClick={showReminder}
-                      >
-                        <Clock3 size={15} />
-                        後で返信
-                      </button>
-                      <div>
+                      {selected.contact.platform === "line" && <ImageReply key={selected.conversation.id} conversationId={selected.conversation.id} sending={sending} setSending={setSending} onError={setError} onSent={async () => { setNotice("画像を送信しました"); await refresh(); }} />}
+                      <div className="composer-send-actions">
                         <span className="character-count">
                           {(drafts[active] || "").length} / 5000
                         </span>
@@ -690,7 +690,14 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  {selected.contact.platform === "line" && <ImageReply key={selected.conversation.id} conversationId={selected.conversation.id} sending={sending} setSending={setSending} onError={setError} onSent={async () => { setNotice("画像を送信しました"); await refresh(); }} />}
+                  <ScheduledMessages key={selected.conversation.id} conversationId={selected.conversation.id}
+                    name={selected.contact.displayName} platform={selected.contact.platform} text={drafts[active] || ""}
+                    disabled={busy || sending} onRefresh={refresh} onReserved={text => {
+                      if (draftRef.current[active] === text) {
+                        draftRef.current = { ...draftRef.current, [active]: "" }; setDrafts(draftRef.current);
+                      }
+                      setNotice("予約送信を設定しました");
+                    }} />
                   <p>
                     <i />
                     {selected.contact.platform === "line" ? "LINE" : "Slack"}
