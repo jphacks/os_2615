@@ -303,15 +303,6 @@ export default function App() {
         </div>
       </aside>
       <main>
-        <header className="topbar">
-          <span>
-            ワークスペース <ChevronRight size={13} /> <b>Inbox</b>
-          </span>
-          <span className="mode">
-            <i />
-            {isMock ? "デモモード" : "APIモード"}
-          </span>
-        </header>
         <section className="heading">
           <div>
             <h1>
@@ -482,7 +473,6 @@ export default function App() {
                     <Link2 size={18} />
                   </span>
                 </div>
-                <div className="eyebrow">A LITTLE CLOSER.</div>
                 <div className="welcome-platforms">
                   <Platform value="line" />
                   <span>＋</span>
