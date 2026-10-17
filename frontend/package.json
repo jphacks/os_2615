@@ -1,0 +1,7 @@
+{
+  "name": "konekuto-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "こねくとFrontendの依存関係と実行設定。React・Vite導入時に担当Bが更新する。",
+  "type": "module"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "konekuto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "こねくとBackendの依存関係と実行設定。現在はディレクトリ構成のみ。",
+  "type": "module"
+}
