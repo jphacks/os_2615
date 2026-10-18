@@ -112,4 +112,6 @@ npm run build --prefix frontend
 
 ## 今後の展望
 
+対応サービスや機能を拡充し、問い合わせ対応やイベント運営など、こねくとを活用できる場面をさらに広げます。
+
 Microsoft Teams・Instagram・Discordへの接続、ログイン・権限管理の追加を検討しています。いずれも現時点では未実装です。
