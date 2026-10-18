@@ -7,6 +7,7 @@ import * as fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createJsonStore } from '../src/repositories/jsonStore.js';
+import { createStateIndex } from '../src/repositories/stateIndex.js';
 import { createApp } from '../src/app.js';
 import { demoState } from './fixtures/demoState.js';
 
@@ -147,7 +148,10 @@ test('破損JSON・不正構造は空データで上書きしない', async t =>
 
 test('想定外の内部エラー内容をAPIに露出せずサーバーを維持', async t => {
   let broken = true;
-  const store = { read() { if (broken) throw new Error('private-error-text'); return demoState(); } };
+  const store = {
+    read() { if (broken) throw new Error('private-error-text'); return demoState(); },
+    readIndexed(select) { const state = this.read(); return structuredClone(select(state, createStateIndex(state))); }
+  };
   const get = await serve(t, store);
   const result = await get('/api/contacts');
   assert.equal(result.status, 500);

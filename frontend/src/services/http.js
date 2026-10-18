@@ -4,7 +4,7 @@ export async function request(path, options = {}) {
     response = await fetch(`/api${path}`, {
       ...options,
       headers: { "Content-Type": "application/json", ...options.headers },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(path.startsWith("/messages/reply-image") ? 60000 : 15000),
     });
   } catch {
     throw Object.assign(

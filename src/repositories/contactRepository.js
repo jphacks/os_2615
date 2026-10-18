@@ -45,17 +45,16 @@ export function createContactRepository(store) {
       });
     },
     listInbox() {
-      const state = store.read();
-      return state.contacts.map(contact => {
-        const conversation = state.conversations.find(item => item.contactId === contact.id);
+      return store.readIndexed((state,index) => state.contacts.map(contact => {
+        const conversation = index.conversationByContactId.get(contact.id);
         if (!conversation) throw new Error('Missing conversation');
         return {
-          contact: { ...contact, initialName: initialContactName(state, contact) },
+          contact: { ...contact, initialName: index.initialNameByContact.get(contact.id) },
           conversation,
-          lastMessage: state.messages.find(item => item.id === conversation.lastMessageId) ?? null,
-          reminder: state.reminders.find(item => item.conversationId === conversation.id && item.status === 'pending') ?? null
+          lastMessage: index.messagesById.get(conversation.lastMessageId) ?? null,
+          reminder: index.pendingReminderByConversation.get(conversation.id) ?? null
         };
-      });
+      }));
     }
   };
 }

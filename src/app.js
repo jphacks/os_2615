@@ -2,6 +2,8 @@
 管理API・LINE専用Webhookを別ポートで起動し、Slack Socket Modeも同じ保存層へ接続する。
 */
 import 'dotenv/config';
+import { createPushService } from './services/pushService.js';
+import { createPushRouter } from './routes/push.js';
 import { createMediaRepository } from './repositories/mediaRepository.js';
 import { createMediaRouter } from './routes/media.js';
 import { createTabRepository } from './repositories/tabRepository.js';
@@ -53,11 +55,12 @@ export function createWebhookApp(store, options = {}) {
   return app;
 }
 
-export function createApp(store, { providers = { line: createLineClient() }, mediaRepository = createMediaRepository(), publicBaseUrl = process.env.PUBLIC_BASE_URL } = {}) {
+export function createApp(store, { providers = { line: createLineClient() }, mediaRepository = createMediaRepository(), publicBaseUrl = process.env.PUBLIC_BASE_URL, push } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.use('/api', express.json({ limit: '64kb' }));
+  if (push) app.use('/api/push', createPushRouter(push));
   app.get('/api/health', (_req, res) => res.json({ data: { status: 'ok' } }));
   app.use('/api/media', createMediaRouter(mediaRepository));
   app.use('/api/tabs', createTabsRouter(createTabService(createTabRepository(store))));
@@ -102,13 +105,15 @@ export function createApp(store, { providers = { line: createLineClient() }, med
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const store = await createSplitStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
+    const push = await createPushService(store, fileURLToPath(new URL('../data/push.json', import.meta.url)));
     const slack = createSlackReceiver(createMessageService(createMessageRepository(store)));
-    const adminApp = createApp(store, { providers: { line: createLineClient(), slack } });
+    const adminApp = createApp(store, { providers: { line: createLineClient(), slack }, push });
     let closing = false;
     let listening = 0;
     const onListening = () => {
       if (++listening === 2 && !closing) {
         logEvent('SERVER_STARTED');
+        push.start();
         adminApp.locals.history.start();
         void slack.start();
         void adminApp.locals.schedules.start().catch(() => logEvent('SCHEDULE_PROCESS_FAILED'));
@@ -119,6 +124,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const close = () => {
       if (closing) return;
       closing = true;
+      push.stop();
       adminApp.locals.schedules.stop();
       adminApp.locals.history.stop();
       servers.forEach(server => server.close());

@@ -30,13 +30,13 @@ export function createMessageRepository(store) {
       return store.read().contacts.some(contact => contact.platform === incoming.platform && contact.platformUserId === incoming.platformUserId);
     },
     getReplyContext(conversationId) {
-      const state = store.read();
-      const conversation = state.conversations.find(item => item.id === conversationId);
-      if (!conversation) throw notFound();
-      const contact = state.contacts.find(item => item.id === conversation.contactId);
-      if (!contact || contact.platform !== conversation.platform) throw invalidInput();
-      return { conversation, contact,
-        reminder: state.reminders.find(item => item.conversationId === conversationId && item.status === 'pending') ?? null };
+      return store.readIndexed((_state,index) => {
+        const conversation = index.conversationsById.get(conversationId);
+        if (!conversation) throw notFound();
+        const contact = index.contactsById.get(conversation.contactId);
+        if (!contact || contact.platform !== conversation.platform) throw invalidInput();
+        return { conversation, contact, reminder: index.pendingReminderByConversation.get(conversationId) ?? null };
+      });
     },
     saveReply(context, draft, scheduledId) {
       return store.update(state => {
@@ -96,18 +96,18 @@ export function createMessageRepository(store) {
       });
     },
     findHistory(contactId) {
-      const state = store.read();
-      const contact = state.contacts.find(item => item.id === contactId);
-      if (!contact) return null;
-      const conversation = state.conversations.find(item => item.contactId === contactId);
-      if (!conversation) throw new Error('Missing conversation');
-      return {
-        contact: { ...contact, initialName: initialContactName(state, contact) },
-        conversation,
-        messages: state.messages.filter(item => item.conversationId === conversation.id)
-          .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)),
-        reminder: state.reminders.find(item => item.conversationId === conversation.id && item.status === 'pending') ?? null
-      };
+      return store.readIndexed((_state,index) => {
+        const contact = index.contactsById.get(contactId);
+        if (!contact) return null;
+        const conversation = index.conversationByContactId.get(contactId);
+        if (!conversation) throw new Error('Missing conversation');
+        return {
+          contact: { ...contact, initialName: index.initialNameByContact.get(contact.id) },
+          conversation,
+          messages: index.messagesByConversation.get(conversation.id) ?? [],
+          reminder: index.pendingReminderByConversation.get(conversation.id) ?? null
+        };
+      });
     }
   };
 }

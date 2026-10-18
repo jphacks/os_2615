@@ -28,11 +28,10 @@ export function createReplyService(repository, providers, { mediaRepository, pub
       try {
         const context = repository.getReplyContext(conversationId);
         const provider = Object.hasOwn(providers, context.conversation.platform) ? providers[context.conversation.platform] : null;
-        if (image && context.conversation.platform !== 'line') throw invalidInput();
         if (!(image ? provider?.sendImage : provider?.sendText)) throw new AppError(503, 'PROVIDER_NOT_CONFIGURED', '送信サービスが未設定です。');
         let media, baseUrl;
         if (image) {
-          try {
+          if (context.conversation.platform === 'line') try {
             const url = new URL(publicBaseUrl);
             if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error();
             baseUrl = url.origin;
@@ -41,7 +40,7 @@ export function createReplyService(repository, providers, { mediaRepository, pub
         }
         let draft;
         try { draft = image
-          ? await provider.sendImage({ conversation: context.conversation, contact: context.contact, media, publicBaseUrl: baseUrl })
+          ? await provider.sendImage({ conversation: context.conversation, contact: context.contact, media, bytes: input.bytes, publicBaseUrl: baseUrl })
           : await provider.sendText({ conversation: context.conversation, contact: context.contact, text }); }
         catch (error) {
           if (error instanceof AppError) throw error;
