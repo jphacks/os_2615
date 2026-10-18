@@ -51,6 +51,33 @@ test('作成・更新・Inbox連携・再起動後の保持・取消', async t =
   assert.equal((await request('/reminders', input())).status, 201);
 });
 
+test('APIの一覧は返信期限を優先し、設定・期限変更・取消・返信・既読に追従する', async t => {
+  const { request } = await setup(t);
+  const line = 'demo-contact-line', slack = 'demo-contact-slack';
+  const order = async () => (await request('/contacts')).body.data.map(item => item.contact.id);
+  const deadline = minutes => new Date(Date.now() + minutes * 60000).toISOString();
+  const slackReminder = { conversationId: 'demo-conversation-slack', messageId: 'demo-message-slack', remindAt: deadline(60) };
+  assert.equal((await request(`/contacts/${slack}/favorite`, { isFavorite: true }, 'PATCH')).status, 200);
+  assert.deepEqual(await order(), [slack, line]);
+  assert.equal((await request('/reminders', { ...input(), remindAt: deadline(120) })).status, 201);
+  assert.deepEqual(await order(), [line, slack]);
+  assert.equal((await request('/reminders', slackReminder)).status, 201);
+  assert.deepEqual(await order(), [slack, line]);
+  const earlier = await request('/reminders', { ...input(), remindAt: deadline(30) });
+  assert.equal(earlier.status, 200);
+  assert.deepEqual(await order(), [line, slack]);
+  assert.equal((await request(`/reminders/${earlier.body.data.id}`, { status: 'cancelled' }, 'PATCH')).status, 200);
+  assert.deepEqual(await order(), [slack, line]);
+  assert.equal((await request('/reminders', { ...input(), remindAt: deadline(30) })).status, 201);
+  assert.deepEqual(await order(), [line, slack]);
+  assert.equal((await request('/messages/reply', { conversationId: input().conversationId, text: '返信しました' })).status, 201);
+  assert.deepEqual(await order(), [slack, line]);
+  const later = (await request('/contacts?filter=later')).body.data;
+  assert.deepEqual(later.map(item => item.contact.id), [slack]);
+  assert.equal((await request(`/contacts/${slack}/complete`, { lastMessageId: 'demo-message-slack' })).status, 200);
+  assert.deepEqual((await request('/contacts?filter=later')).body.data, []);
+});
+
 test('不正日時・入力・クエリ・別会話のMessageを拒否する', async t => {
   const { request, store } = await setup(t);
   const before = store.read();

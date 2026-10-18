@@ -109,14 +109,14 @@ reminderはその会話のpendingのみ。done/cancelledしかない場合はnul
 }
 ```
 
-上記は構造例。実際の一覧はお気に入り優先なので佐藤が先頭になる。
+上記は構造例。実際の一覧は未完了の返信期限を優先し、期限が同じ場合や未設定同士ではお気に入りを優先する。
 
 ## GET /api/contacts?filter=all
 
 filter: all（省略時）/ unreplied / favorite / later。
 unrepliedはconversation.hasUnreplied、favoriteはcontact.isFavorite、
 laterはpending Reminderの存在で絞る。期限超過もlaterに含める。
-並び順はお気に入り優先、その中でcontact.lastMessageAt降順、同時刻はcontact.id昇順。
+並び順はstatus=pendingのreminder.remindAt昇順（期限超過も含む）。期限未設定の会話は後に表示する。同一期限・期限未設定同士では、お気に入り優先、contact.lastMessageAt降順、contact.id昇順。返信・既読・取消でリマインダーが終了すると期限による優先表示の対象外になる。各filterでもこの並び順を適用する。
 成功200: { data: InboxItem[] }。
 
 ## GET /api/contacts/:id/messages

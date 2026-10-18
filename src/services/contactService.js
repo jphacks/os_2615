@@ -3,6 +3,11 @@
 */
 import { invalidInput } from '../utils/errors.js';
 
+function replyDeadline({ reminder }) {
+  const deadline = reminder?.status === 'pending' ? Date.parse(reminder.remindAt) : NaN;
+  return Number.isFinite(deadline) ? deadline : Infinity;
+}
+
 export function createContactService(repository) {
   return {
     rename(contactId, input) {
@@ -35,9 +40,14 @@ export function createContactService(repository) {
         if (filter === 'favorite') return item.contact.isFavorite;
         if (filter === 'later') return item.reminder !== null;
         return true;
-      }).sort((a, b) => Number(b.contact.isFavorite) - Number(a.contact.isFavorite) ||
-        Date.parse(b.contact.lastMessageAt) - Date.parse(a.contact.lastMessageAt) ||
-        a.contact.id.localeCompare(b.contact.id));
+      }).sort((a, b) => {
+        const aDeadline = replyDeadline(a), bDeadline = replyDeadline(b);
+        // 期限超過を含め、未完了の返信期限が早い相手から表示する。
+        if (aDeadline !== bDeadline) return aDeadline < bDeadline ? -1 : 1;
+        return Number(b.contact.isFavorite) - Number(a.contact.isFavorite) ||
+          Date.parse(b.contact.lastMessageAt) - Date.parse(a.contact.lastMessageAt) ||
+          a.contact.id.localeCompare(b.contact.id);
+      });
     }
   };
 }
