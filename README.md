@@ -102,6 +102,7 @@ ngrok http http://127.0.0.1:5174
 - **外部連携：** LINE Messaging API、Slack API／Socket Mode、Web Push、デモ公開用のngrok。
 - **保存：** ローカルJSON。メッセージをサービス・人物別、画像をサービス別に分け、管理情報を`data/store.json`へ保存。
 - **軽量化：** 会話別メッセージMap、最終メッセージのID参照、画面非表示中の定期取得の休止。
+- **デモ機能：** 認証情報なしでもモック3人で動作確認できます。返信・画像送信は外部へ送らず、デモ専用の`data/demo/`へ保存します。
 
 外部サービス固有の処理は`src/providers/`、共通API・保存処理は`src/`、画面は`frontend/`に分離しています。
 
