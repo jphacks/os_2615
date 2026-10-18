@@ -269,7 +269,7 @@ h1 span {
   font-weight: 600;
   margin: 0;
 }
-.list-heading h2 span {
+.list-heading h2 .list-count {
   font-size: calc(10px * var(--font-scale, 1));
   color: #a4a4a4;
   background: #f0f0f0;
@@ -1691,7 +1691,7 @@ h1 span {
 [data-theme="dark"] .unread-dot { background: #ddd; }
 [data-theme="dark"] .toast { background: #e7e7e7; color: #202020; }
 [data-theme="dark"] .search { background: var(--surface); color: var(--muted-ink); }
-[data-theme="dark"] :is(.list-heading h2 span, .chosen small, .day-divider span) { background: var(--selected-surface); color: var(--muted-ink); }
+[data-theme="dark"] :is(.list-heading h2 .list-count, .chosen small, .day-divider span) { background: var(--selected-surface); color: var(--muted-ink); }
 
 /* 並び順の見出しと移動ボタン列を分ける。 */
 .tab-order-controls { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px; }
@@ -1846,7 +1846,7 @@ main > .install-app, main > .error { flex-shrink: 0; }
 @media (max-width: 450px) {
   .list-heading { padding: 14px 12px 12px; gap: 5px; }
   .list-heading h2 { font-size: calc(11px * var(--font-scale, 1)); }
-  .list-heading h2 span { margin-left: 3px; }
+  .list-heading h2 .list-count { margin-left: 3px; }
   .list-heading .platform-filter > span { font-size: calc(9px * var(--font-scale, 1)); }
   .list-heading .platform-picker { min-width: 80px; }
   .list-heading .platform-trigger { gap: 6px; padding: 7px; }
@@ -1857,8 +1857,10 @@ main > .install-app, main > .error { flex-shrink: 0; }
 .composer textarea { min-height: 0; box-sizing: border-box; line-height: 1.27; resize: none; overflow-y: auto; }
 .messages .message { margin-bottom: 7px; }
 
-/* 小型端末の特大文字でも一覧ヘッダーを一行に保つ。 */
-.list-heading h2 { display: flex; align-items: center; white-space: nowrap; flex-shrink: 0; }
+/* 長いタブ名や特大文字でも、件数と操作ボタンを一覧内に保つ。 */
+.list-heading h2 { display: flex; align-items: center; white-space: nowrap; flex: 1 1 auto; overflow: hidden; }
+.list-heading .list-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.list-heading .list-count { flex-shrink: 0; }
 @media (max-width: 360px) {
   .list-heading .platform-filter > span { display: none; }
 }

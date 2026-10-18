@@ -172,12 +172,21 @@ export default function App() {
     setDetail(null);
   }
   useEffect(() => {
-    loadList();
-    const t = setInterval(() => {
-      loadList();
-      if (activeRef.current) loadDetail(activeRef.current);
-    }, 5000);
-    return () => clearInterval(t);
+    let stopped = false;
+    let timer;
+    async function poll() {
+      // 遅い応答を次の自動更新で無効にし続けないよう、完了後に次回を予約する。
+      await Promise.all([
+        loadList(),
+        activeRef.current ? loadDetail(activeRef.current) : Promise.resolve(),
+      ]);
+      if (!stopped) timer = setTimeout(poll, 5000);
+    }
+    void poll();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, []);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -380,8 +389,10 @@ export default function App() {
           <section className="inbox-panel" aria-label="会話一覧">
             <div className="list-heading">
               <h2>
-                {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}{" "}
-                <span>{visible.length}</span>
+                <span className="list-title" title={filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}>
+                  {filters.find((f) => f[0] === filter)?.[1] ?? "選択中"}
+                </span>
+                <span className="list-count">{visible.length}</span>
               </h2>
               <button
                 className="icon-button list-refresh"
@@ -656,9 +667,6 @@ export default function App() {
                       </React.Fragment>
                     );
                   })}
-                  {!selected.messages.length && (
-                    <div className="empty">メッセージはまだありません</div>
-                  )}
                   <div ref={end} />
                 </div>
                 <form className="composer" onSubmit={send}>
