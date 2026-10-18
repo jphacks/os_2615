@@ -112,3 +112,28 @@ test('Service Workerは通知を表示し、クリックで同じサイトを開
   await pending;
   assert.equal(closed, true); assert.deepEqual(opened, ['/']);
 });
+
+test('テスト通知は毎回異なるタグで、通常の新着通知と区別する', async t => {
+  const sent = [];
+  const { service } = await setup(t, async (_sub, payload) => sent.push(JSON.parse(payload)));
+  const sub = subscription(); await service.subscribe(sub);
+  await service.test(sub); await service.test(sub);
+  assert.match(sent[0].title, /テスト通知/);
+  assert.match(sent[0].tag, /^konekuto-test-/);
+  assert.notEqual(sent[0].tag, sent[1].tag);
+});
+test('Service Workerは再通知を有効にし、テスト通知の受信・表示結果を画面へ伝える', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const source = await fs.readFile(new URL('../frontend/public/push-sw.js', import.meta.url), 'utf8');
+  for (const fail of [false, true]) {
+    const handlers = {}, replies = []; let pending;
+    runInNewContext(source, { URL, self: {
+      addEventListener: (name, handler) => { handlers[name] = handler; },
+      registration: { showNotification: async (_title, options) => { assert.equal(options.renotify, true); assert.equal(options.tag, 'konekuto-test-id'); if (fail) throw new Error('denied'); } },
+      clients: { matchAll: async () => [{ postMessage: value => replies.push(value) }] }
+    } });
+    handlers.push({ data: { json: () => ({ tag: 'konekuto-test-id' }) }, waitUntil: promise => { pending = promise; } });
+    await pending;
+    assert.equal(replies[0].type, 'KONEKUTO_PUSH_TEST'); assert.equal(replies[0].stage, fail ? 'failed' : 'shown');
+  }
+});

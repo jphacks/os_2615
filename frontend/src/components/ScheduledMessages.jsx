@@ -2,6 +2,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Clock3, X} from 'lucide-react';
+import {startVisiblePolling} from '../services/visiblePolling.js';
 import {api} from '../services/api.js';
 import ReminderCalendar from './ReminderCalendar.jsx';
 import {localDateTime} from './reminderDate.js';
@@ -22,10 +23,8 @@ export default function ScheduledMessages({conversationId, name, platform, text,
  }
  useEffect(()=>{
   mounted.current=true;
-  const poll=()=>{if(document.visibilityState==='visible')load();};
-  poll();const timer=setInterval(poll,5000);
-  document.addEventListener('visibilitychange',poll);
-  return()=>{mounted.current=false;clearInterval(timer);++version.current;document.removeEventListener('visibilitychange',poll);};
+  const stop = startVisiblePolling(load);
+  return()=>{mounted.current=false;++version.current;stop();};
  },[conversationId]);
  function open(){setLatest(localDateTime(new Date(Date.now()+14*24*60*60000)));setBody(text);setWhen(localDateTime(new Date(Date.now()+30*60000)));setError('');request.current=null;setOpened(true);dialog.current.showModal();}
  async function reserve(event){

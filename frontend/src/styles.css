@@ -982,7 +982,7 @@ h1 span {
     padding: 9px 13px;
   }
 }
-@media (max-width: 650px) {
+@media (max-width: 800px) {
   .sidebar {
     display: none;
   }
@@ -1558,7 +1558,7 @@ h1 span {
       0 0 0 5px #cf262f30;
   }
 }
-@media (max-width: 650px) {
+@media (max-width: 800px) {
   .reminder-alert-stack {
     top: 14px;
     right: 8px;
@@ -1760,7 +1760,7 @@ h1 span {
 .tab-rename-form input { width: 100%; box-sizing: border-box; }
 
 .complete-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 10px; border: 1px solid currentColor; border-radius: 8px; font-size: calc(11px * var(--font-scale, 1)); flex-shrink: 0; }
-@media (max-width: 650px) { .conversation-header { flex-wrap: wrap; } .complete-button { white-space: nowrap; } }
+@media (max-width: 800px) { .conversation-header { flex-wrap: wrap; } .complete-button { white-space: nowrap; } }
 
 /* 予約送信は未送信の予定として履歴と分けて表示する。 */
 .scheduled-messages { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -1797,7 +1797,7 @@ main > .install-app, main > .error { flex-shrink: 0; }
 .composer { flex-shrink: 0; max-height: 55%; overflow-y: auto; }
 .scheduled-list { max-height: min(120px, 15dvh); min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; grid-auto-rows: max-content; }
 .scheduled-message p { max-height: 60px; }
-@media (max-width: 650px) {
+@media (max-width: 800px) {
  main { padding-top: 8px; padding-bottom: 8px; }
  .inbox-layout { height: auto; min-height: 0; }
  .conversation-header { gap: 6px; }
@@ -1816,7 +1816,7 @@ main > .install-app, main > .error { flex-shrink: 0; }
 .composer-actions > .composer-send-actions { margin-left: auto; }
 .image-reply .image-picker-toolbar { flex-wrap: nowrap; gap: 4px; }
 .image-picker-hint { white-space: nowrap; }
-@media (max-width: 650px) {
+@media (max-width: 800px) {
  .header-later { font-size: calc(10px * var(--font-scale, 1)); gap: 3px; }
  .composer-actions > .image-reply { flex-basis: 165px; }
  .composer-actions .image-picker-button { width: 32px; height: 36px; }
@@ -1926,3 +1926,9 @@ html { overflow-x: clip; }
 
 .platform-trigger, .platform-options button { white-space: nowrap; }
 .platform-trigger svg, .platform-options button svg { flex-shrink: 0; }
+
+/* 後で返信の期限と操作を読み取りやすくする。 */
+.later-chip { font-size: calc(10px * var(--font-scale, 1)); font-weight: 600; color: var(--ink, #252525); gap: 4px; }
+.later-chip svg { width: 12px; height: 12px; flex-shrink: 0; }
+.header-later { font-size: calc(12px * var(--font-scale, 1)); font-weight: 600; color: var(--ink, #252525); }
+@media (max-width: 450px) { .header-later { font-size: calc(11px * var(--font-scale, 1)); } }
