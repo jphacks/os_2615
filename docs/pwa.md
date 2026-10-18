@@ -10,7 +10,7 @@ Android用のAPKではなく、ブラウザからインストールするWebア�
 - ブラウザがbeforeinstallpromptを発行した場合だけ、画面にインストールボタンを表示する。
 - APIとメッセージはキャッシュしない。Service Workerによるオフライン対応は実装していない。
 - インストール後もFrontend配信とBackend起動、外部送受信用のインターネット接続が必要。
-- アプリを閉じた後の通知・バックグラウンド受信は追加していない。
+- Web Pushで新着・返信リマインダーを通知できる。設定で端末ごとの許可が必要。iPhoneはiOS 16.4以降でホーム画面に追加して利用する。
 
 ブラウザの要件は[MDNのインストール条件](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)を参照。
 スマホからMacのLAN IPへHTTPで接続した場合は、ホーム画面のショートカットになってもPWAとしてのインストール条件は満たさない。
@@ -54,7 +54,7 @@ Backend側のraw body署名検証はそのまま有効。Slack Socket Modeの設
 
 ## 確認したこと・未確認のこと
 
-- ビルド成功、Frontendテスト9件成功。
+- ビルドと自動テストで動作を検証している。端末への実通知受信は設定画面の「テスト通知」で確認する。
 - プレビューからHTML・マニフェスト・PNGアイコンの配信を確認。アイコンの192/512pxサイズも検証した。
 - 一時的なBackendを使って同一オリジンの/api転送を確認した。
 - iPhoneでホーム画面からの単独起動、会話表示、実サービスへの返信をユーザーが確認済み。
