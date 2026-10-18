@@ -2,6 +2,7 @@
 管理API・LINE専用Webhookを別ポートで起動し、Slack Socket Modeも同じ保存層へ接続する。
 */
 import 'dotenv/config';
+import { isDemoMode, openDemoStore, createDemoProvider } from './demo/demoMode.js';
 import { createPushService } from './services/pushService.js';
 import { createPushRouter } from './routes/push.js';
 import { createMediaRepository } from './repositories/mediaRepository.js';
@@ -104,10 +105,16 @@ export function createApp(store, { providers = { line: createLineClient() }, med
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const store = await createSplitStore(fileURLToPath(new URL('../data/store.json', import.meta.url)));
-    const push = await createPushService(store, fileURLToPath(new URL('../data/push.json', import.meta.url)));
-    const slack = createSlackReceiver(createMessageService(createMessageRepository(store)));
-    const adminApp = createApp(store, { providers: { line: createLineClient(), slack }, push });
+    const demo = isDemoMode();
+    const dataUrl = new URL(demo ? '../data/demo/' : '../data/', import.meta.url);
+    const store = demo ? await openDemoStore(fileURLToPath(dataUrl))
+      : await createSplitStore(fileURLToPath(new URL('store.json', dataUrl)));
+    const push = await createPushService(store, fileURLToPath(new URL('push.json', dataUrl)));
+    const mediaRepository = createMediaRepository(fileURLToPath(new URL('media/', dataUrl)));
+    const slack = demo ? createDemoProvider('slack') : createSlackReceiver(createMessageService(createMessageRepository(store)));
+    const adminApp = createApp(store, { providers: { line: demo ? createDemoProvider('line') : createLineClient(), slack },
+      mediaRepository, publicBaseUrl: demo ? 'https://demo.invalid' : process.env.PUBLIC_BASE_URL, push });
+    if (demo) logEvent('DEMO_MODE');
     let closing = false;
     let listening = 0;
     const onListening = () => {
@@ -120,7 +127,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       }
     };
     const servers = [adminApp.listen(3000, '127.0.0.1', onListening),
-      createWebhookApp(store).listen(3001, '127.0.0.1', onListening)];
+      (demo ? express() : createWebhookApp(store, { mediaRepository })).listen(3001, '127.0.0.1', onListening)];
     const close = () => {
       if (closing) return;
       closing = true;
