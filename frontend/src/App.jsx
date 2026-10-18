@@ -173,25 +173,50 @@ export default function App() {
   }
   useEffect(() => {
     let stopped = false;
+    let running = false;
     let timer;
     async function poll() {
-      // 遅い応答を次の自動更新で無効にし続けないよう、完了後に次回を予約する。
-      await Promise.all([
-        loadList(),
-        activeRef.current ? loadDetail(activeRef.current) : Promise.resolve(),
-      ]);
-      if (!stopped) timer = setTimeout(poll, 5000);
+      clearTimeout(timer);
+      if (stopped || running || document.visibilityState !== 'visible') return;
+      running = true;
+      try {
+        // 応答を待って次回を予約し、遅い通信でも更新を重ねない。
+        await Promise.all([
+          loadList(),
+          activeRef.current ? loadDetail(activeRef.current) : Promise.resolve(),
+        ]);
+      } finally {
+        running = false;
+        if (!stopped && document.visibilityState === 'visible') timer = setTimeout(poll, 5000);
+      }
     }
     void poll();
+    document.addEventListener('visibilitychange', poll);
     return () => {
       stopped = true;
       clearTimeout(timer);
+      document.removeEventListener('visibilitychange', poll);
     };
   }, []);
+  // 秒表示はないため、次のリマインダー期限だけで時刻を更新する。
+  const nextReminderAt = items.reduce((next,item) => {
+    const at = item.reminder ? Date.parse(item.reminder.remindAt) : Infinity;
+    return at > now && at < next ? at : next;
+  }, Infinity);
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    setNow(Date.now());
+    if (!Number.isFinite(nextReminderAt)) return;
+    let timer;
+    const tick = () => {
+      const remaining = nextReminderAt - Date.now();
+      if (remaining > 0) timer = setTimeout(tick, Math.min(2147483647,remaining));
+      else setNow(Date.now());
+    };
+    tick();
+    const resumed = () => { if (document.visibilityState === 'visible') setNow(Date.now()); };
+    document.addEventListener('visibilitychange', resumed);
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', resumed); };
+  }, [nextReminderAt]);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [active, selected?.messages.length]);
@@ -513,9 +538,9 @@ export default function App() {
                   </span>
                 </div>
                 <div className="welcome-platforms">
-                  <Platform value="line" />
+                  <span className="welcome-service"><span className="official-service-icon"><img src="/service-icons/line.png" alt="LINE" width="32" height="32" /></span><span className="welcome-service-label"><Platform value="line" /></span></span>
                   <span>＋</span>
-                  <Platform value="slack" />
+                  <span className="welcome-service"><span className="official-service-icon"><img src="/service-icons/slack.png" alt="Slack" width="32" height="32" /></span><span className="welcome-service-label"><Platform value="slack" /></span></span>
                 </div>
                 {due > 0 && (
                   <button
@@ -643,11 +668,26 @@ export default function App() {
                           )}
                           <div className="message-content">
                             {!m.isFromMe && <small>{m.senderName}</small>}
-                            <div className="bubble">
+                            <div className="bubble" tabIndex={0}
+                              onClick={event => {
+                                if (!event.target.closest("a, button, input")) event.currentTarget.focus({ preventScroll: true });
+                              }}
+                              onKeyDown={event => {
+                                if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "a") return;
+                                const body = event.currentTarget.querySelector(".message-body-text");
+                                if (!body) return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                const range = document.createRange();
+                                range.selectNodeContents(body);
+                                const selection = window.getSelection();
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                              }}>
                               {m.messageType === "sticker" && (
                                 <span className="sticker-icon">☺</span>
                               )}
-                              {m.messageType === "image" ? <><MessageImage key={m.media?.id ?? m.id} media={m.media} />{m.text && m.text !== "[画像]" && <p className="image-caption">{m.text}</p>}</> : m.text}
+                              {m.messageType === "image" ? <><MessageImage key={m.media?.id ?? m.id} media={m.media} />{m.text && m.text !== "[画像]" && <p className="image-caption message-body-text">{m.text}</p>}</> : <span className="message-body-text">{m.text}</span>}
                               {m.messageType === "sticker" &&
                                 Array.isArray(m.metadata?.keywords) &&
                                 m.metadata.keywords.length > 0 && (
@@ -673,6 +713,7 @@ export default function App() {
                   <div className="composer-input">
                     <ReplyTextarea
                       aria-label="返信メッセージ"
+                      onSend={send}
                       placeholder={`${selected.contact.displayName}さんに返信…`}
                       rows={3}
                       maxLength={5000}
@@ -713,7 +754,7 @@ export default function App() {
                     <i />
                     {selected.contact.platform === "line" ? "LINE" : "Slack"}
                      に送信されます
-                    <span>改行は Enter</span>
+                    <span>送信は Enter・改行は Shift＋Enter</span>
                   </p>
                 </form>
               </>

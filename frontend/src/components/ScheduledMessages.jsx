@@ -17,10 +17,16 @@ export default function ScheduledMessages({conversationId, name, platform, text,
  const dialog=useRef(null), request=useRef(null), version=useRef(0), mounted=useRef(true);
  async function load() {
   const v=++version.current;
-  try {const result=await api.scheduledMessages(conversationId);if(mounted.current&&v===version.current)setJobs(result.data);}
+  try {const result=await api.scheduledMessages(conversationId);if(mounted.current&&v===version.current)setJobs(current=>JSON.stringify(current)===JSON.stringify(result.data)?current:result.data);}
   catch(e){if(mounted.current&&v===version.current)setError(e.message);}
  }
- useEffect(()=>{mounted.current=true;load();const timer=setInterval(load,5000);return()=>{mounted.current=false;clearInterval(timer);++version.current;};},[conversationId]);
+ useEffect(()=>{
+  mounted.current=true;
+  const poll=()=>{if(document.visibilityState==='visible')load();};
+  poll();const timer=setInterval(poll,5000);
+  document.addEventListener('visibilitychange',poll);
+  return()=>{mounted.current=false;clearInterval(timer);++version.current;document.removeEventListener('visibilitychange',poll);};
+ },[conversationId]);
  function open(){setLatest(localDateTime(new Date(Date.now()+14*24*60*60000)));setBody(text);setWhen(localDateTime(new Date(Date.now()+30*60000)));setError('');request.current=null;setOpened(true);dialog.current.showModal();}
  async function reserve(event){
   event.preventDefault();event.stopPropagation();if(busy)return;

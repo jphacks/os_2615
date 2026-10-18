@@ -1882,3 +1882,8 @@ html { overflow-x: clip; }
 .contact-menu-action:disabled { opacity: .45; }
 .contact-danger-actions { margin-top: 20px; }
 @media (pointer: coarse) { .contact-card-shell > .contact-settings-trigger { min-width: 44px; min-height: 44px; right: 2px; top: 4px; } }
+
+.welcome-service { display: inline-flex; align-items: center; }
+@media (min-width: 1001px) and (pointer: fine) {
+  .welcome-service-label { display: none; }
+}

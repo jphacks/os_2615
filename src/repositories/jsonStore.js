@@ -4,6 +4,7 @@
 import * as fs from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createStateIndex } from './stateIndex.js';
 import { storageError } from '../utils/errors.js';
 
 const emptyState = () => ({ version: 1, contacts: [], conversations: [], messages: [], reminders: [] });
@@ -62,8 +63,14 @@ export async function createJsonStore(filePath, { io = fs } = {}) {
     else throw storageError();
   }
   let queue = Promise.resolve();
+  let index = null;
   return {
     read() { return structuredClone(state); },
+    // 最初の参照時だけ索引を構築。返却結果だけ複製し、内部の行・Mapは公開しない。
+    readIndexed(select) {
+      index ??= createStateIndex(state);
+      return structuredClone(select(state, index));
+    },
     update(mutator) {
       const operation = queue.then(async () => {
         const draft = structuredClone(state);
@@ -79,6 +86,7 @@ export async function createJsonStore(filePath, { io = fs } = {}) {
           throw storageError();
         }
         state = draft;
+        index = null;
         return structuredClone(result);
       });
       queue = operation.catch(() => {});
