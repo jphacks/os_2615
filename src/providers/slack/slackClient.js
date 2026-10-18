@@ -2,7 +2,7 @@
 Slack Botの識別情報・表示名取得とDM返信を担当する。生のAPIエラーは公開しない。
 */
 import { AppError, deliveryUnknown, invalidInput, providerError } from '../../utils/errors.js';
-import { MAX_IMAGE_BYTES } from '../../repositories/mediaRepository.js';
+import { MAX_IMAGE_BYTES, imageType } from '../../repositories/mediaRepository.js';
 import { mapSlackSentMessage } from './slackMapper.js';
 
 export function createSlackClient(webClient, { now = Date.now, accessToken = process.env.SLACK_BOT_TOKEN, fetchImpl = fetch } = {}) {
@@ -31,6 +31,30 @@ export function createSlackClient(webClient, { now = Date.now, accessToken = pro
         if (error?.data?.error === 'missing_scope') throw new AppError(502,'SLACK_FILE_PERMISSION','Slack画像を取得できません。Botのfiles:read権限と再インストールを確認してください。');
         throw new AppError(502,'PROVIDER_ERROR','Slack画像を取得できませんでした。ファイルの共有範囲と接続を確認してください。');
       }
+    },
+    async sendImage({ conversation, contact, media, bytes }) {
+      if (conversation.platform !== 'slack' || contact.platform !== 'slack' ||
+          !/^D[A-Z0-9]+$/.test(conversation.platformConversationId) || !Buffer.isBuffer(bytes) ||
+          !bytes.length || bytes.length > MAX_IMAGE_BYTES || imageType(bytes) !== media?.mimeType) throw invalidInput();
+      const account = await client.getIdentity();
+      if (!contact.platformUserId.startsWith(`${account.teamId}:`)) throw invalidInput();
+      let result;
+      try {
+        result = await webClient.filesUploadV2({ channel_id: conversation.platformConversationId,
+          file: bytes, filename: media.mimeType === 'image/png' ? 'konekuto.png' : 'konekuto.jpg', title: 'こねくとからの画像' });
+      } catch (error) {
+        if (error?.data?.error === 'missing_scope') throw new AppError(502, 'SLACK_FILE_WRITE_PERMISSION', 'Slack画像送信にはBotのfiles:write権限が必要です。権限追加後にワークスペースへ再インストールしてください。');
+        const definite = error?.code === 'slack_webapi_rate_limited_error' ||
+          error?.code === 'slack_webapi_platform_error' && ['not_authed', 'invalid_auth', 'token_revoked', 'account_inactive', 'channel_not_found', 'not_in_channel', 'file_uploads_disabled'].includes(error.data?.error);
+        throw definite ? providerError() : deliveryUnknown();
+      }
+      // SDK v7はfilesにcompleteUploadExternalの応答を格納する。
+      const files = result?.files?.flatMap(item => Array.isArray(item.files) ? item.files : [item]);
+      const file = files?.[0];
+      if (!result?.ok || !/^F[A-Z0-9]+$/.test(file?.id) || files.length !== 1) throw deliveryUnknown();
+      return { platform: 'slack', messageType: 'image', platformMessageId: file.id,
+        senderId: account.botUserId, text: '[画像]', timestamp: new Date(now()).toISOString(), isFromMe: true, media,
+        metadata: { fileId: file.id, channelId: conversation.platformConversationId, botId: account.botId } };
     },
     async sendText({ conversation, contact, text }) {
       if (conversation.platform !== 'slack' || contact.platform !== 'slack' ||

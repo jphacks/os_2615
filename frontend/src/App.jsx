@@ -1,3 +1,4 @@
+import BulkSend from './components/BulkSend.jsx';
 import React, { useEffect, useRef, useState } from "react";
 import {
   Settings as SettingsIcon,
@@ -102,6 +103,7 @@ export default function App() {
     listVersion = useRef(0),
     detailVersion = useRef(0),
     draftRef = useRef({}),
+    imageReply = useRef(null),
     end = useRef(null),
     modal = useRef(null),
     restoreFocus = useRef(null);
@@ -248,6 +250,7 @@ export default function App() {
   async function send(e) {
     e.preventDefault();
     if (!selected || sending) return;
+    if (imageReply.current?.hasFile) { await imageReply.current.send(); return; }
     const id = active,
       text = draftRef.current[id] || "";
     if (!text.trim() || text.length > 5000) return;
@@ -449,6 +452,7 @@ export default function App() {
               <DraggableTabs onEdit={editTabName} dragEnabled={tabMoveMethod !== "buttons"} tabs={tabs} filter={filter} counts={counts} onSelect={setFilter} onAdd={() => setCreatingTab(true)} onReorder={reorderTabs} onError={setError} />
             </div>
             <CustomTabs editRequest={tabEditRequest} showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
+            {filter.startsWith("tab:") && <BulkSend key={filter} tab={tabs.find(tab => `tab:${tab.id}` === filter)} items={items} onRefresh={refresh} />}
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
@@ -727,7 +731,7 @@ export default function App() {
                       }}
                     />
                     <div className="composer-actions">
-                      {selected.contact.platform === "line" && <ImageReply key={selected.conversation.id} conversationId={selected.conversation.id} sending={sending} setSending={setSending} onError={setError} onSent={async () => { setNotice("画像を送信しました"); await refresh(); }} />}
+                      {<ImageReply ref={imageReply} key={selected.conversation.id} conversationId={selected.conversation.id} sending={sending} setSending={setSending} onError={setError} onSent={async () => { setNotice("画像を送信しました"); await refresh(); }} />}
                       <div className="composer-send-actions">
                         <span className="character-count">
                           {(drafts[active] || "").length} / 5000

@@ -107,6 +107,11 @@ export function createSlackReceiver(messages, {
       if (!replyClient || stopped) throw new AppError(502, 'PROVIDER_ERROR', 'Slack接続の準備ができていません。');
       return replyClient.sendText(input);
     },
+    async sendImage(input) {
+      if (!botToken?.trim() || !appToken?.trim()) throw new AppError(503, 'PROVIDER_NOT_CONFIGURED', 'Slackの認証情報が未設定です。');
+      if (!replyClient || stopped) throw new AppError(502, 'PROVIDER_ERROR', 'Slack接続の準備ができていません。');
+      return replyClient.sendImage(input);
+    },
     async start() {
       if (stopped || started) return false;
       started = true;
