@@ -1926,3 +1926,9 @@ html { overflow-x: clip; }
 
 .platform-trigger, .platform-options button { white-space: nowrap; }
 .platform-trigger svg, .platform-options button svg { flex-shrink: 0; }
+
+/* 後で返信の期限と操作を読み取りやすくする。 */
+.later-chip { font-size: calc(10px * var(--font-scale, 1)); font-weight: 600; color: var(--ink, #252525); gap: 4px; }
+.later-chip svg { width: 12px; height: 12px; flex-shrink: 0; }
+.header-later { font-size: calc(12px * var(--font-scale, 1)); font-weight: 600; color: var(--ink, #252525); }
+@media (max-width: 450px) { .header-later { font-size: calc(11px * var(--font-scale, 1)); } }

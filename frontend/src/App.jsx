@@ -453,9 +453,6 @@ export default function App() {
             </div>
             <CustomTabs editRequest={tabEditRequest} showOrderControls={tabMoveMethod !== "drag"} creating={creatingTab} onCloseCreate={() => setCreatingTab(false)} tabs={tabs} items={items} filter={filter} onSelect={setFilter} onRefresh={loadList} />
             {filter.startsWith("tab:") && <BulkSend key={filter} tab={tabs.find(tab => `tab:${tab.id}` === filter)} items={items} onRefresh={refresh} />}
-            <p className="reply-priority-note" title="「後で返信」の期限順です。期限を過ぎた会話が先に、期限未設定の会話が後に並びます。同じ期限では従来の表示順を保ちます。">
-              <Clock3 size={13} aria-hidden="true" />返信期限が早い順
-            </p>
             <div className="list-scroll">
               {loading ? (
                 <div className="empty">会話を読み込んでいます…</div>
