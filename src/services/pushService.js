@@ -71,10 +71,10 @@ export async function createPushService(store, filePath, { send = webpush.sendNo
   }
   function notify(subscription, kind, key) {
     return send(subscription, JSON.stringify({
-      title: kind === 'reminder' ? 'こねくと：返信の時間です' : 'こねくと：新着メッセージ',
-      body: kind === 'reminder' ? '「後で返信」に設定した会話を確認してください。' : '新しいメッセージが届きました。',
-      tag: kind === 'reminder' ? key : 'konekuto-new-message'
-    }), { TTL: 3600, timeout: 10000, urgency: 'normal',
+      title: kind === 'test' ? 'こねくと：テスト通知' : kind === 'reminder' ? 'こねくと：返信の時間です' : 'こねくと：新着メッセージ',
+      body: kind === 'test' ? 'プッシュ通知の受信確認用です。' : kind === 'reminder' ? '「後で返信」に設定した会話を確認してください。' : '新しいメッセージが届きました。',
+      tag: kind === 'test' ? `konekuto-test-${key}` : kind === 'reminder' ? key : 'konekuto-new-message'
+    }), { TTL: 3600, timeout: 10000, urgency: kind === 'test' ? 'high' : 'normal',
       vapidDetails: { subject: process.env.WEB_PUSH_SUBJECT || 'https://github.com/jphacks/os_2615', ...state.vapid } });
   }
   let timer, stopped = true, running = false;
@@ -98,7 +98,7 @@ export async function createPushService(store, filePath, { send = webpush.sendNo
       const subscription = validateSubscription(value);
       await queue;
       if (!state.subscriptions.some(row => row.subscription.endpoint === subscription.endpoint && row.subscription.keys.auth === subscription.keys.auth)) throw invalidInput();
-      await notify(subscription, 'message', 'test');
+      await notify(subscription, 'test', randomUUID());
     },
     async tick() {
       if (running) return;
