@@ -6,6 +6,11 @@ import { AppError, deliveryUnknown, invalidInput } from '../utils/errors.js';
 export function createReplyService(repository, providers, { mediaRepository, publicBaseUrl = process.env.PUBLIC_BASE_URL } = {}) {
   const pending = new Set();
   return {
+    async withConversationLock(id, operation) {
+      if (pending.has(id)) throw new AppError(409, 'REPLY_IN_PROGRESS', 'この会話は送信・整理中です。少し待ってください。');
+      pending.add(id);
+      try { return await operation(); } finally { pending.delete(id); }
+    },
     async reply(input) { return send(input, false); },
     async replyScheduled(job) { return send({ conversationId: job.conversationId, text: job.text }, false, job.id); },
     async replyImage(conversationId, bytes) { return send({ conversationId, bytes }, true); }

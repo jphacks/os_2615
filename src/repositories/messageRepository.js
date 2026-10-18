@@ -1,6 +1,7 @@
 /*
 共通受信データを保存し、Contactに紐づく会話履歴を取得する。
 */
+import { initialContactName } from './contactName.js';
 import { randomUUID } from 'node:crypto';
 import { createSentMessage } from '../models/message.js';
 import { notFound, invalidInput } from '../utils/errors.js';
@@ -25,6 +26,9 @@ function duplicate(state, incoming) {
 
 export function createMessageRepository(store) {
   return {
+    hasContact(incoming) {
+      return store.read().contacts.some(contact => contact.platform === incoming.platform && contact.platformUserId === incoming.platformUserId);
+    },
     getReplyContext(conversationId) {
       const state = store.read();
       const conversation = state.conversations.find(item => item.id === conversationId);
@@ -69,9 +73,11 @@ export function createMessageRepository(store) {
           contact = { id: randomUUID(), platform: incoming.platform, platformUserId: incoming.platformUserId,
             displayName: incoming.displayName ?? incoming.message.senderName, isFavorite: false,
             lastMessageAt: incoming.message.timestamp };
+          contact.initialName = contact.displayName;
           state.contacts.push(contact);
-        } else if (incoming.displayName) {
-          contact.displayName = incoming.displayName;
+        } else {
+          contact.initialName ??= initialContactName(state, contact);
+          if (incoming.displayName && !contact.nameOverridden) contact.displayName = incoming.displayName;
         }
         let conversation = state.conversations.find(item => item.contactId === contact.id);
         if (!conversation) {
@@ -96,7 +102,7 @@ export function createMessageRepository(store) {
       const conversation = state.conversations.find(item => item.contactId === contactId);
       if (!conversation) throw new Error('Missing conversation');
       return {
-        contact,
+        contact: { ...contact, initialName: initialContactName(state, contact) },
         conversation,
         messages: state.messages.filter(item => item.conversationId === conversation.id)
           .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)),

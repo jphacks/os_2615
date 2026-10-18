@@ -10,7 +10,7 @@ function timestampFromTs(ts) {
 }
 
 export function mapSlackEvent(event, { teamId, botUserId, eventId, displayName = null } = {}) {
-  if (event?.type !== 'message' || event.channel_type !== 'im' || event.subtype ||
+  if (event?.type !== 'message' || event.channel_type !== 'im' || (event.subtype && !(event.subtype === 'file_share' && Array.isArray(event.files) && event.files.length)) ||
       event.bot_id || event.bot_profile || event.user === botUserId) return null;
   if (typeof event.channel !== 'string' || !event.channel.startsWith('D')) return null;
   if (typeof teamId !== 'string' || !teamId || typeof botUserId !== 'string' || !botUserId ||

@@ -24,6 +24,8 @@ import Settings from "./components/Settings.jsx";
 import InstallApp from "./components/InstallApp.jsx";
 import DraggableTabs from "./components/DraggableTabs.jsx";
 import ScheduledMessages from "./components/ScheduledMessages.jsx";
+import ReplyTextarea from "./components/ReplyTextarea.jsx";
+import ContactSettings from "./components/ContactSettings.jsx";
 import PlatformFilter from "./components/PlatformFilter.jsx";
 import CustomTabs from "./components/CustomTabs.jsx";
 import ReminderCalendar from "./components/ReminderCalendar.jsx";
@@ -325,12 +327,12 @@ export default function App() {
         <div className="sidebar-bottom">
           <p>つながっているサービス</p>
           <div className="connection">
-            <Platform value="line" />
+            <span className="official-service-icon"><img src="/service-icons/line.png" alt="" width="32" height="32" /></span>
             <span>LINE</span>
             <i />
           </div>
           <div className="connection">
-            <Platform value="slack" />
+            <span className="official-service-icon"><img src="/service-icons/slack.png" alt="" width="32" height="32" /></span>
             <span>Slack</span>
             <i />
           </div>
@@ -388,9 +390,8 @@ export default function App() {
               >
                 <RefreshCw size={15} />
               </button>
-              {settingsButton}
+              <div className="list-toolbar"><PlatformFilter value={platformFilter} onChange={setPlatformFilter} />{settingsButton}</div>
             </div>
-            <PlatformFilter value={platformFilter} onChange={setPlatformFilter} />
             <label className="search">
               <Search size={16} />
               <input
@@ -437,9 +438,9 @@ export default function App() {
                     lastMessage: m,
                     reminder: r,
                   }) => (
+                    <div className="contact-card-shell" key={c.id}>
                     <button
                       className={`contact-card ${active === c.id ? "active" : ""} ${r?.status === "pending" && Date.parse(r.remindAt) <= now ? "reminder-due" : ""}`}
-                      key={c.id}
                       onClick={() => open(c.id)}
                     >
                       <Avatar contact={c} />
@@ -462,7 +463,7 @@ export default function App() {
                           ) : (
                             <span className="replied">
                               <Check size={11} />
-                              {m?.isFromMe ? "返信済み" : "対応済み"}
+                              {!m ? "履歴なし" : m.isFromMe ? "返信済み" : "既読"}
                             </span>
                           )}
                           {r && (
@@ -479,6 +480,8 @@ export default function App() {
                       </div>
                       {v.hasUnreplied && <i className="unread-dot" />}
                     </button>
+                    <ContactSettings contact={c} disabled={busy || sending} onChanged={refresh} onDeleted={async result => { if (activeRef.current === c.id) back(); setNotice(result.cleanupPending ? "人物を削除しました。画像の整理を再試行します" : "人物とデータを削除しました"); await loadList(); }} />
+                    </div>
                   ),
                 )
               )}
@@ -546,8 +549,8 @@ export default function App() {
                   {selected.conversation.hasUnreplied && <button
                     type="button" className="complete-button" disabled={busy || sending}
                     title="メッセージを送らず対応を完了し、リマインダーも終了します"
-                    onClick={() => action(() => api.complete(selected.contact.id, selected.conversation.lastMessageId), "対応済みにしました")}>
-                    <Check size={16} />対応済みにする
+                    onClick={() => action(() => api.complete(selected.contact.id, selected.conversation.lastMessageId), "既読にしました")}>
+                    <Check size={16} />既読にする
                   </button>}
                   <button type="button" className="later-button header-later" disabled={busy || sending || !selected.messages.length} onClick={showReminder}>
                     <Clock3 size={15} />後で返信
@@ -574,7 +577,6 @@ export default function App() {
                   >
                     <Star size={20} />
                   </button>
-                  {settingsButton}
                 </header>
                 {selected.reminder && (
                   <div
@@ -601,6 +603,7 @@ export default function App() {
                   </div>
                 )}
                 <div className="messages">
+                  {!selected.messages.length && <div className="empty">トーク履歴はありません</div>}
                   {selected.messages.map((m, i) => {
                     const prev = selected.messages[i - 1];
                     return (
@@ -633,7 +636,7 @@ export default function App() {
                               {m.messageType === "sticker" && (
                                 <span className="sticker-icon">☺</span>
                               )}
-                              {m.messageType === "image" ? <MessageImage key={m.media?.id ?? m.id} media={m.media} /> : m.text}
+                              {m.messageType === "image" ? <><MessageImage key={m.media?.id ?? m.id} media={m.media} />{m.text && m.text !== "[画像]" && <p className="image-caption">{m.text}</p>}</> : m.text}
                               {m.messageType === "sticker" &&
                                 Array.isArray(m.metadata?.keywords) &&
                                 m.metadata.keywords.length > 0 && (
@@ -660,7 +663,7 @@ export default function App() {
                 </div>
                 <form className="composer" onSubmit={send}>
                   <div className="composer-input">
-                    <textarea
+                    <ReplyTextarea
                       aria-label="返信メッセージ"
                       placeholder={`${selected.contact.displayName}さんに返信…`}
                       rows={3}

@@ -1,10 +1,21 @@
 /*
 Contactのお気に入りを永続化し、関連する会話・最終メッセージを共通形式で取得する。
 */
+import { initialContactName } from './contactName.js';
 import { AppError, notFound } from '../utils/errors.js';
 
 export function createContactRepository(store) {
   return {
+    rename(contactId, name) {
+      return store.update(state => {
+        const contact = state.contacts.find(row => row.id === contactId);
+        if (!contact) throw notFound();
+        contact.initialName = initialContactName(state, contact);
+        contact.displayName = name || contact.initialName;
+        contact.nameOverridden = Boolean(name);
+        return contact;
+      });
+    },
     complete(contactId, lastMessageId) {
       return store.update(state => {
         const conversation = state.conversations.find(item => item.contactId === contactId);
@@ -39,7 +50,7 @@ export function createContactRepository(store) {
         const conversation = state.conversations.find(item => item.contactId === contact.id);
         if (!conversation) throw new Error('Missing conversation');
         return {
-          contact,
+          contact: { ...contact, initialName: initialContactName(state, contact) },
           conversation,
           lastMessage: state.messages.find(item => item.id === conversation.lastMessageId) ?? null,
           reminder: state.reminders.find(item => item.conversationId === conversation.id && item.status === 'pending') ?? null
