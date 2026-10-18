@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/konekuto-logo.png" alt="こねくと — メールとチャットをつなぐロゴ" width="420">
+</p>
+
 # こねくと
 
 **誰から届いて、誰に返すかを こねくと ひとつで。**
