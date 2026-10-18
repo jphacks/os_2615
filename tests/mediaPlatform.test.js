@@ -25,3 +25,9 @@ test('LINE・Slackの画像を別フォルダに保存し同じURL形式で再�
  await assert.rejects(repo.save(png,'line',1),e=>e.status===413);
  await assert.rejects(repo.read('../store.json'),e=>e.status===404);
 });
+
+test('画像の保存上限は1MB、1バイト超過は拒否する',async t=>{
+ const dir=await fs.mkdtemp(join(tmpdir(),'konekuto-limit-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));
+ const repo=createMediaRepository(dir), bytes=Buffer.alloc(1024*1024);png.copy(bytes);
+ await repo.save(bytes,'line');await assert.rejects(repo.save(Buffer.concat([bytes,Buffer.from([0])]),'line'),e=>e.status===413);
+});

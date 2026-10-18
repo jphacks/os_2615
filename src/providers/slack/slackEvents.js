@@ -5,6 +5,7 @@ import { App, LogLevel, SocketModeReceiver } from '@slack/bolt';
 import { logEvent } from '../../utils/logger.js';
 import { createSlackClient } from './slackClient.js';
 import { mapSlackEvent } from './slackMapper.js';
+import { createMediaRepository } from '../../repositories/mediaRepository.js';
 import { AppError } from '../../utils/errors.js';
 
 // SDKから渡される引数は意図的に捨てる。ログレベル変更でも秘密情報を出力しない。
@@ -15,7 +16,7 @@ export const slackLogger = {
   setName() {}, setLevel() {}, getLevel() { return LogLevel.WARN; }
 };
 
-export function createSlackMessageHandler(messages, { teamId, botUserId, getDisplayName }) {
+export function createSlackMessageHandler(messages, { teamId, botUserId, getDisplayName, getImage, mediaRepository }) {
   return async ({ event, body = {} }) => {
     try {
       if (body.team_id && body.team_id !== teamId) return false;
@@ -23,9 +24,32 @@ export function createSlackMessageHandler(messages, { teamId, botUserId, getDisp
       const incoming = mapSlackEvent(event, options);
       if (!incoming || messages.isDuplicate(incoming)) return false;
       let displayName = null;
-      try { displayName = await getDisplayName(event.user); }
+      try { displayName = await getDisplayName(event.user, { refresh: !messages.hasContact(incoming) }); }
       catch { logEvent('SLACK_PROFILE_UNAVAILABLE'); }
-      await messages.receive(displayName ? mapSlackEvent(event, { ...options, displayName }) : incoming);
+      const normalized = displayName ? mapSlackEvent(event, { ...options, displayName }) : incoming;
+      const files = Array.isArray(event.files) ? event.files : [];
+      if (!files.length) { await messages.receive(normalized); return true; }
+      for (let i=0; i<files.length; i++) {
+        const file=files[i];
+        const item=structuredClone(normalized);
+        item.message.platformMessageId=`${event.ts}:${file.id ?? i}`;
+        if (messages.isDuplicate(item)) continue;
+        item.message.text=i===0 && event.text ? event.text : '[画像]';
+        try {
+          if (!getImage || !mediaRepository) throw new Error('Image provider unavailable');
+          item.message.media=await mediaRepository.save(await getImage(file.id),'slack');
+          item.message.messageType='image';
+        } catch(error) {
+          item.message.messageType='other';
+          const code=error?.code;
+          const note=['IMAGE_TOO_LARGE','PAYLOAD_TOO_LARGE'].includes(code) ? '画像の受信上限（1MB）を超えたため保存できませんでした。'
+            : code==='SLACK_FILE_PERMISSION' ? 'Slack画像を取得できません。Botのfiles:read権限と再インストールを確認してください。'
+            : code==='UNSUPPORTED_IMAGE'||code==='VALIDATION_ERROR' ? 'JPEG・PNG以外のファイルは表示できません。' : 'Slack画像を取得できませんでした。ファイルの共有範囲と接続を確認してください。';
+          item.message.text=(i===0 && event.text ? event.text+'\n' : '')+note;
+          item.message.metadata.imageRejected=['IMAGE_TOO_LARGE','PAYLOAD_TOO_LARGE'].includes(code)?'too_large':'unavailable';
+        }
+        await messages.receive(item);
+      }
       return true;
     } catch {
       logEvent('SLACK_RECEIVE_FAILED');
@@ -39,6 +63,7 @@ export function createSlackReceiver(messages, {
   appToken = process.env.SLACK_APP_TOKEN,
   AppClass = App,
   ReceiverClass = SocketModeReceiver,
+  mediaRepository = createMediaRepository(),
   reconnectDelayMs = 5000
 } = {}) {
   let app;
@@ -108,10 +133,10 @@ export function createSlackReceiver(messages, {
         app.error(async () => logEvent('SLACK_RECEIVE_FAILED'));
         // 初期化中の認証エラーもこのtry内で受け、HTTPサーバーは維持する。
         await app.init();
-        const client = createSlackClient(app.client);
+        const client = createSlackClient(app.client, { accessToken: botToken });
         const identity = await client.getIdentity();
         if (stopped) return false;
-        const handle = createSlackMessageHandler(messages, { ...identity, getDisplayName: client.getDisplayName });
+        const handle = createSlackMessageHandler(messages, { ...identity, getDisplayName: client.getDisplayName, getImage: client.getImage, mediaRepository });
         app.event('message', async args => {
           if (stopped) return;
           const operation = handle(args);

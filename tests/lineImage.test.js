@@ -69,8 +69,8 @@ test('LINE content取得は固定APIを使い容量超過・エラーを安全�
  assert.deepEqual(await client.getImage('id /'),png);assert.equal(called.url,'https://api-data.line.me/v2/bot/message/id%20%2F/content');assert.equal(called.options.redirect,'error');
  const failed=createLineClient({accessToken:'secret',fetchImpl:async()=>new Response('private-token',{status:404})});
  await assert.rejects(failed.getImage('x'),e=>e.code==='PROVIDER_ERROR'&&!e.message.includes('private-token'));
- const large=createLineClient({accessToken:'secret',fetchImpl:async()=>new Response('',{headers:{'content-length':String(11*1024*1024)}})});
- await assert.rejects(large.getImage('x'),e=>e.code==='PROVIDER_ERROR');
+ const large=createLineClient({accessToken:'secret',fetchImpl:async()=>new Response('',{headers:{'content-length':String(1024*1024+1)}})});
+ await assert.rejects(large.getImage('x'),e=>e.code==='IMAGE_TOO_LARGE'&&e.status===413);
 });
 test('受信画像は元のバイナリと安全なファイル名でダウンロードできる',async t=>{
  const f=await setup(t);await f.post();const media=f.store.read().messages[0].media;
@@ -81,4 +81,17 @@ test('受信画像は元のバイナリと安全なファイル名でダウン�
  assert.deepEqual(Buffer.from(await response.arrayBuffer()),png);
  assert.equal((await fetch(`${f.api}${media.url}/download?file=anything`)).status,400);
  assert.equal((await fetch(`${f.api}/api/media/not-an-id/download`)).status,404);
+});
+
+test('容量超過画像は案内を保存して200を返し、再受信でも重複や外部返信をしない',async t=>{
+ const {AppError}=await import('../src/utils/errors.js');
+ const f=await setup(t,{getImage:async()=>{throw new AppError(413,'IMAGE_TOO_LARGE','limit')}});
+ assert.equal((await f.post()).status,200);assert.equal((await f.post()).status,200);
+ const messages=f.store.read().messages;assert.equal(messages.length,1);assert.equal(messages[0].messageType,'other');assert.match(messages[0].text,/1MB/);assert.equal(messages[0].metadata.imageRejected,'too_large');assert.equal(f.pushes.length,0);
+});
+test('content-lengthがない画像でもストリームの容量超過を識別する',async()=>{
+ let cancelled=false;
+ const stream=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(1024*1024+1));},cancel(){cancelled=true;}});
+ const client=createLineClient({accessToken:'secret',fetchImpl:async()=>new Response(stream)});
+ await assert.rejects(client.getImage('x'),e=>e.code==='IMAGE_TOO_LARGE');assert.equal(cancelled,true);
 });

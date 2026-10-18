@@ -300,7 +300,7 @@ media: { id, url, mimeType, size } を共通フィールドとして持つ。
 urlは /api/media/:id。LINE固有情報は引き続きmetadataへ隔離する。
 
 LINE画像受信時は署名検証後、保存済みのメッセージIDでLINE content APIから取得しdata/media/へ保存する。
-受信は最大10MB。取得・保存に失敗したイベントは成功扱いで破棄せず、Webhookへエラーを返す。
+受信は最大1MB。取得・保存に失敗したイベントは成功扱いで破棄せず、Webhookへエラーを返す。
 外部contentProvider URLは自動取得せず、従来の未対応表示とする。
 
 POST /api/messages/reply-image?conversationId=...:
@@ -349,3 +349,24 @@ PCはタブをドラッグ、スマホは横のつまみを長押しして移動
 ### GET /api/media/:id/download
 
 保存済み画像を `Content-Disposition: attachment` で返します。通常表示用URLは従来どおり利用できます。
+
+
+### DELETE /api/contacts/:id/messages
+
+こねくと内の履歴を削除。本文 `{ "lastMessageId": "表示中の最終ID（空履歴はnull）", "messageCount": 12 }`。表示時点から最終IDまたは件数が変わった場合は409。送信・整理中も409。成功 `{ "data": { "deletedMessages": 12, "cleanupPending": false } }`。画像・関連リマインダー・完了した予約を整理し、人物・タブ所属・送信待ち予約は保持。外部履歴は変更しない。cleanupPendingは画像削除の再試行待ちを示す。
+
+### GET /api/data-policy
+
+`{ "data": { "retentionDays": 30 } }`。送受信履歴・画像は30日保持。Backend起動時と1時間ごとに期限以下の履歴を削除する。完了した予約も予定時刻から30日で整理し、送信待ち・送信中の予約は保持する。
+
+LINEの画像容量超過は再試行対象の通信障害と分離し、messageType=other / metadata.imageRejected=too_largeとして案内を一度保存する。外部自動返信はしない。
+
+
+### DELETE /api/contacts/:id
+
+本文は履歴削除と同じ `{ lastMessageId, messageCount }`。人物・会話・履歴・画像・リマインダー・すべての予約・タブ所属をこねくと内から削除する。タブ自体・他人物・外部サービスの履歴は保持する。送信・整理中または履歴変更時は409。新着メッセージが届くと人物は再登録される（ブロック機能ではない）。
+
+
+### PATCH /api/contacts/:id/name
+
+本文 `{ "name": "仕事の窓口" }`（trim後0〜100文字、空欄は初期名へリセット）。こねくと内の表示名を変更し、新着受信で外部名に上書きされないよう保持する。送信先ID・履歴・外部サービスの名前は変更しない。成功 `{ data: Contact }`、不正入力400、存在しない人物404。

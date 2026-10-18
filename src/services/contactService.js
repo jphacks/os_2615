@@ -5,6 +5,11 @@ import { invalidInput } from '../utils/errors.js';
 
 export function createContactService(repository) {
   return {
+    rename(contactId, input) {
+      if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 ||
+          typeof input.name !== 'string' || input.name.trim().length > 100) throw invalidInput();
+      return repository.rename(contactId, input.name.trim());
+    },
     complete(contactId, input) {
       if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length !== 1 ||
           typeof input.lastMessageId !== 'string' || !input.lastMessageId.trim()) throw invalidInput();

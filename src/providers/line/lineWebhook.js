@@ -39,7 +39,14 @@ export function createLineWebhookRouter(messages, {
       catch { logEvent('LINE_PROFILE_UNAVAILABLE'); }
       const normalized = name ? mapLineEvent(event, name) : incoming;
       if (normalized.message.messageType === 'image') {
-        normalized.message.media = await mediaRepository.save(await getImage(normalized.message.platformMessageId), 'line');
+        try {
+          normalized.message.media = await mediaRepository.save(await getImage(normalized.message.platformMessageId), 'line');
+        } catch (error) {
+          if (!['IMAGE_TOO_LARGE', 'PAYLOAD_TOO_LARGE'].includes(error?.code)) throw error;
+          normalized.message.messageType = 'other';
+          normalized.message.text = '画像の受信上限（1MB）を超えたため保存できませんでした。';
+          normalized.message.metadata = { ...normalized.message.metadata, imageRejected: 'too_large' };
+        }
       }
       await messages.receive(normalized);
     }

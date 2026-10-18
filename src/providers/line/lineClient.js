@@ -31,19 +31,26 @@ export function createLineClient({ accessToken = process.env.LINE_CHANNEL_ACCESS
         const response = await fetchImpl(`https://api-data.line.me/v2/bot/message/${encodeURIComponent(messageId)}/content`, {
           headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(10000), redirect: 'error'
         });
-        if (!response.ok || Number(response.headers.get('content-length')) > MAX_IMAGE_BYTES) throw new Error('Content unavailable');
+        if (!response.ok) throw new Error('Content unavailable');
+        if (Number(response.headers.get('content-length')) > MAX_IMAGE_BYTES) {
+          await response.body?.cancel();
+          throw new AppError(413, 'IMAGE_TOO_LARGE', '画像の受信上限（1MB）を超えています。');
+        }
         const reader = response.body.getReader();
         let size = 0; const chunks = [];
         try {
           while (true) {
             const { done, value } = await reader.read(); if (done) break;
             size += value.byteLength;
-            if (size > MAX_IMAGE_BYTES) { await reader.cancel(); throw new Error('Content too large'); }
+            if (size > MAX_IMAGE_BYTES) { await reader.cancel(); throw new AppError(413, 'IMAGE_TOO_LARGE', '画像の受信上限（1MB）を超えています。'); }
             chunks.push(Buffer.from(value));
           }
         } finally { reader.releaseLock(); }
         return Buffer.concat(chunks);
-      } catch { throw new AppError(502, 'PROVIDER_ERROR', 'LINE画像を取得できませんでした。'); }
+      } catch (error) {
+        if (error?.code === 'IMAGE_TOO_LARGE') throw error;
+        throw new AppError(502, 'PROVIDER_ERROR', 'LINE画像を取得できませんでした。');
+      }
     },
     async sendImage({ conversation, contact, media, publicBaseUrl }) {
       if (conversation.platform !== 'line' || contact.platform !== 'line' ||

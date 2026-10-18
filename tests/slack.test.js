@@ -275,3 +275,21 @@ test('接続後の切断・再接続タイムアウトをcatchし、再接続・
   await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(attempts, finalAttempts);
 });
+
+test('削除後のSlack再登録はキャッシュを更新して改名を反映する',async t=>{
+ let name='旧名', lookups=0;
+ const client=createSlackClient({users:{info:async()=>{lookups++;return {ok:true,user:{profile:{display_name:name}}};}}});
+ const f=await setup(t,{getDisplayName:client.getDisplayName});
+ await f.handle(args());assert.equal(f.store.read().contacts[0].displayName,'旧名');
+ name='新名';
+ await f.store.update(s=>{s.contacts=[];s.conversations=[];s.messages=[];s.reminders=[];});
+ await f.handle({event:event({ts:'1792198801.123456'}),body:{team_id:'T_TEST',event_id:'Ev_NEW'}});
+ assert.equal(f.store.read().contacts[0].displayName,'新名');assert.equal(lookups,2);
+});
+test('Slack表示名キャッシュは5分後に更新し、強制更新失敗で古い名前を返さない',async()=>{
+ let clock=0,name='旧名',fail=false;
+ const client=createSlackClient({users:{info:async()=>{if(fail)throw Error('network');return {ok:true,user:{profile:{display_name:name}}};}}},{now:()=>clock});
+ assert.equal(await client.getDisplayName('U_PERSON'),'旧名');name='新名';assert.equal(await client.getDisplayName('U_PERSON'),'旧名');
+ clock=300000;assert.equal(await client.getDisplayName('U_PERSON'),'新名');fail=true;
+ await assert.rejects(client.getDisplayName('U_PERSON',{refresh:true}));await assert.rejects(client.getDisplayName('U_PERSON'));
+});

@@ -20,6 +20,10 @@ function validateIncoming(incoming) {
 
 export function createMessageService(repository) {
   return {
+    hasContact(incoming) {
+      validateIncoming(incoming);
+      return repository.hasContact(incoming);
+    },
     isDuplicate(incoming) {
       validateIncoming(incoming);
       return repository.isDuplicate(incoming);

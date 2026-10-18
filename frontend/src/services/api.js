@@ -2,6 +2,10 @@ import { request } from "./http.js";
 const write = (path, method, body) =>
   request(path, { method, body: JSON.stringify(body) });
 export const api = {
+  renameContact: (id, name) => write(`/contacts/${encodeURIComponent(id)}/name`, 'PATCH', {name}),
+  deleteContact: (id, snapshot) => write(`/contacts/${encodeURIComponent(id)}`, 'DELETE', snapshot),
+  deleteHistory: (id, snapshot) => write(`/contacts/${encodeURIComponent(id)}/messages`, 'DELETE', snapshot),
+  dataPolicy: () => request('/data-policy'),
   scheduledMessages: (conversationId) => request(`/scheduled-messages?conversationId=${encodeURIComponent(conversationId)}`),
   scheduleMessage: (body) => write('/scheduled-messages', 'POST', body),
   cancelScheduledMessage: (id) => write(`/scheduled-messages/${encodeURIComponent(id)}`, 'DELETE', {}),

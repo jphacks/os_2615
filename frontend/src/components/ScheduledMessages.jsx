@@ -53,7 +53,7 @@ export default function ScheduledMessages({conversationId, name, platform, text,
     <label>送信する本文<textarea aria-label="予約送信の本文" value={body} maxLength={5000} disabled={busy} onChange={event=>setBody(event.target.value)} rows={3}/></label>
     <ReminderCalendar value={when} onChange={setWhen} disabled={busy} maxDateTime={latest}/>
     <p className="modal-note">予約できるのは現在から14日後までです。</p>
-    <p className="modal-note">Backendの起動中に送信します。停止中に時刻を過ぎた予約は送信しません。送信開始後は取り消せません。通常の返信や「対応済み」操作では予約は取り消されません。</p>
+    <p className="modal-note">Backendの起動中に送信します。停止中に時刻を過ぎた予約は送信しません。送信開始後は取り消せません。通常の返信や「既読」操作では予約は取り消されません。</p>
     {error&&<p role="alert" className="modal-error">{error}</p>}
     <button className="send-button modal-submit" disabled={busy||!body.trim()}>{busy?'予約中…':'この内容・日時で予約する'}</button>
    </form>}

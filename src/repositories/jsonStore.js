@@ -31,11 +31,14 @@ function validateState(state) {
       new Set(state.tabs.map(tab => tab.id)).size !== state.tabs.length)) throw storageError();
   if (state.contacts.some(row => !['line', 'slack'].includes(row.platform) ||
       typeof row.displayName !== 'string' || typeof row.isFavorite !== 'boolean' ||
+      (row.initialName !== undefined && (typeof row.initialName !== 'string' || !row.initialName.trim())) ||
+      (row.nameOverridden !== undefined && typeof row.nameOverridden !== 'boolean') ||
       (row.searchName !== undefined && (typeof row.searchName !== 'string' || row.searchName.length > 100)) ||
       !Number.isFinite(Date.parse(row.lastMessageAt)) ||
       !state.conversations.some(item => item.contactId === row.id)) ||
       state.conversations.some(row => !state.contacts.some(item => item.id === row.contactId) ||
         typeof row.hasUnreplied !== 'boolean' ||
+        !(row.lastMessageId === null && !state.messages.some(item => item.conversationId === row.id) && row.hasUnreplied === false) &&
         !state.messages.some(item => item.id === row.lastMessageId && item.conversationId === row.id)) ||
       state.messages.some(row => !state.conversations.some(item => item.id === row.conversationId) ||
         !Number.isFinite(Date.parse(row.timestamp)) ||

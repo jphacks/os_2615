@@ -8,6 +8,7 @@ import { createTabRepository } from './repositories/tabRepository.js';
 import { createTabService } from './services/tabService.js';
 import { createTabsRouter } from './routes/tabs.js';
 import express from 'express';
+import { createHistoryService, RETENTION_DAYS } from './services/historyService.js';
 import { createScheduledMessageService } from './services/scheduledMessageService.js';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,6 +66,17 @@ export function createApp(store, { providers = { line: createLineClient() }, med
   app.use('/api/messages', createMessagesRouter(replies));
   const schedules = createScheduledMessageService(store, replies);
   app.locals.schedules = schedules;
+  const history = createHistoryService(store, mediaRepository, replies);
+  app.locals.history = history;
+  app.get('/api/data-policy', (_req, res) => res.json({ data: { retentionDays: RETENTION_DAYS } }));
+  app.delete('/api/contacts/:id', async (req, res) => {
+    if (Object.keys(req.query).length) throw invalidScheduleQuery();
+    res.json({ data: await history.clear(req.params.id, req.body, true) });
+  });
+  app.delete('/api/contacts/:id/messages', async (req, res) => {
+    if (Object.keys(req.query).length) throw invalidScheduleQuery();
+    res.json({ data: await history.clear(req.params.id, req.body) });
+  });
   app.get('/api/scheduled-messages', (req, res) => {
     if (Object.keys(req.query).some(key => key !== 'conversationId')) throw invalidScheduleQuery();
     res.json({ data: schedules.list(req.query.conversationId) });
@@ -97,6 +109,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const onListening = () => {
       if (++listening === 2 && !closing) {
         logEvent('SERVER_STARTED');
+        adminApp.locals.history.start();
         void slack.start();
         void adminApp.locals.schedules.start().catch(() => logEvent('SCHEDULE_PROCESS_FAILED'));
       }
@@ -107,6 +120,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       if (closing) return;
       closing = true;
       adminApp.locals.schedules.stop();
+      adminApp.locals.history.stop();
       servers.forEach(server => server.close());
       void slack.stop();
     };
